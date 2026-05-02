@@ -50,6 +50,9 @@
         .timeline-marker:active {
             cursor: grabbing;
         }
+        #mcap-panel { pointer-events: auto; }
+        #mcap-video-wrapper { position: relative; background: #000; min-height: 168px; }
+        #mcap-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
     </style>
     <!-- Import Map for Three.js -->
     <script type="importmap">
@@ -119,6 +122,10 @@
                                 <button id="import-animation-btn" class="bg-white/10 hover:bg-white/15 text-white text-xs font-medium py-1 px-2 rounded-lg border border-white/10 transition-colors">Import</button>
                             </div>
                             <button id="delete-animation-btn" class="w-full bg-red-900/40 hover:bg-red-800/55 text-red-200 text-xs font-medium py-1 px-2 rounded-lg border border-red-900/40 transition-colors">Delete</button>
+                            <button id="mcap-upload-btn" class="w-full bg-cyan-700/70 hover:bg-cyan-600 text-white text-xs font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1.5">
+                                <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.069A1 1 0 0121 8.882v6.236a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                Capture Motion
+                            </button>
                             <a href="./ripper.html" target="_blank" rel="noopener noreferrer" class="block w-full bg-emerald-600/85 hover:bg-emerald-500 text-center text-white text-xs font-medium py-1 px-2 rounded-lg transition-colors">
                                 Ripper
                             </a>
@@ -208,11 +215,42 @@
     <div id="canvas-container"></div>
     <input id="pose-import-input" type="file" accept=".json,application/json" class="hidden">
     <input id="animation-import-input" type="file" accept=".json,application/json" class="hidden">
+    <input id="mcap-file-input" type="file" accept="video/*" class="hidden">
+
+    <!-- Motion Capture Panel (upper right, shown after video upload) -->
+    <div id="mcap-panel" class="hidden fixed z-50" style="top:1rem;right:1rem;width:296px;">
+        <div class="bg-black/85 backdrop-blur-md rounded-xl border border-white/10 shadow-2xl overflow-hidden">
+            <div id="mcap-video-wrapper">
+                <video id="mcap-video" controls muted playsinline class="w-full block" style="max-height:220px;object-fit:contain;background:#000;display:block;"></video>
+                <canvas id="mcap-overlay"></canvas>
+            </div>
+            <div class="p-2.5 space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <span id="mcap-badge" class="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-emerald-400/10 border border-emerald-400/20 text-emerald-300">Idle</span>
+                        <span id="mcap-tracked" class="text-[10px] text-gray-500">Waiting</span>
+                    </div>
+                    <button id="mcap-close-btn" class="text-gray-500 hover:text-white text-sm leading-none px-1">✕</button>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] text-gray-400 shrink-0">Smooth</span>
+                    <input id="mcap-smoothing" type="range" min="0" max="0.85" step="0.05" value="0.55" class="flex-1 accent-cyan-400 h-1">
+                    <span id="mcap-smoothing-value" class="text-[10px] text-white w-7 text-right shrink-0">0.55</span>
+                </div>
+                <div class="flex gap-1.5">
+                    <button id="mcap-record-btn" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold py-1.5 rounded-lg transition-colors">Start Record</button>
+                    <button id="mcap-neutral-btn" class="bg-white/10 hover:bg-white/15 text-white text-[10px] py-1.5 px-2 rounded-lg border border-white/10 transition-colors">Neutral</button>
+                </div>
+                <p id="mcap-status-text" class="text-[10px] text-gray-500 leading-4 min-h-[2rem]">Loading MediaPipe…</p>
+            </div>
+        </div>
+    </div>
 
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { TransformControls } from 'three/addons/controls/TransformControls.js';
+        import { FilesetResolver, PoseLandmarker } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21-rc.20250105/vision_bundle.mjs';
 
         // --- Core Variables ---
         let camera, scene, renderer;
@@ -271,6 +309,53 @@
         let activeAnimationEffects = null;
         let summonVfx = null;
         const effectAnchorPosition = new THREE.Vector3();
+
+        // --- Motion Capture Constants & State ---
+        const MCAP_WASM_ROOT = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21-rc.20250105/wasm';
+        const MCAP_MODEL_PATH = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+        const MCAP_ROOT_BASE = new THREE.Vector3(0, 2.6, 0);
+        const MCAP_DOWN = new THREE.Vector3(0, -1, 0);
+        const MCAP_JOINTS = [
+            'Hips_0', 'Spine_0', 'Head_0',
+            'Left_Upper_Arm_0', 'Left_Lower_Arm_0',
+            'Right_Upper_Arm_0', 'Right_Lower_Arm_0',
+            'Left_Upper_Leg_0', 'Left_Lower_Leg_0',
+            'Right_Upper_Leg_0', 'Right_Lower_Leg_0'
+        ];
+        const MCAP_PARENTS = {
+            Hips_0: null, Spine_0: 'Hips_0', Head_0: 'Spine_0',
+            Left_Upper_Arm_0: 'Spine_0', Left_Lower_Arm_0: 'Left_Upper_Arm_0',
+            Right_Upper_Arm_0: 'Spine_0', Right_Lower_Arm_0: 'Right_Upper_Arm_0',
+            Left_Upper_Leg_0: 'Hips_0', Left_Lower_Leg_0: 'Left_Upper_Leg_0',
+            Right_Upper_Leg_0: 'Hips_0', Right_Lower_Leg_0: 'Right_Upper_Leg_0'
+        };
+        const MCAP_CONNECTIONS = [
+            [11,12],[11,13],[13,15],[12,14],[14,16],
+            [11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28],
+            [0,11],[0,12]
+        ];
+        const MCAP_LM = {
+            NOSE:0, LEFT_EAR:7, RIGHT_EAR:8,
+            LEFT_SHOULDER:11, RIGHT_SHOULDER:12,
+            LEFT_ELBOW:13, RIGHT_ELBOW:14,
+            LEFT_WRIST:15, RIGHT_WRIST:16,
+            LEFT_HIP:23, RIGHT_HIP:24,
+            LEFT_KNEE:25, RIGHT_KNEE:26,
+            LEFT_ANKLE:27, RIGHT_ANKLE:28
+        };
+        const mcap = {
+            poseLandmarker: null,
+            isRecording: false,
+            animFrameId: 0,
+            lastProcessedTime: -1,
+            lastSampledTime: -Infinity,
+            latestPosePacket: null,
+            rootBaseline: null,
+            defaultPoseState: null,
+            currentPoseState: null,
+            smoothing: 0.55,
+            sampleRate: 10
+        };
 
         // --- Initialization ---
         init();
@@ -448,6 +533,7 @@
             // Add first character
             createCharacter();
             refreshTimelineUi();
+            mcapInit();
         }
 
         function cacheUi() {
@@ -490,6 +576,20 @@
             ui.assetStatus = document.getElementById('asset-status');
             ui.poseImportInput = document.getElementById('pose-import-input');
             ui.animationImportInput = document.getElementById('animation-import-input');
+            // Motion capture UI
+            ui.mcapUploadBtn = document.getElementById('mcap-upload-btn');
+            ui.mcapFileInput = document.getElementById('mcap-file-input');
+            ui.mcapPanel = document.getElementById('mcap-panel');
+            ui.mcapVideo = document.getElementById('mcap-video');
+            ui.mcapOverlay = document.getElementById('mcap-overlay');
+            ui.mcapRecordBtn = document.getElementById('mcap-record-btn');
+            ui.mcapNeutralBtn = document.getElementById('mcap-neutral-btn');
+            ui.mcapCloseBtn = document.getElementById('mcap-close-btn');
+            ui.mcapSmoothing = document.getElementById('mcap-smoothing');
+            ui.mcapSmoothingValue = document.getElementById('mcap-smoothing-value');
+            ui.mcapStatusText = document.getElementById('mcap-status-text');
+            ui.mcapBadge = document.getElementById('mcap-badge');
+            ui.mcapTracked = document.getElementById('mcap-tracked');
         }
 
         // --- Logic & Systems ---
@@ -2308,6 +2408,477 @@
 
             applyPoseAtTime(currentTime);
             refreshTimelineUi();
+        }
+
+        // ===========================================================
+        // MOTION CAPTURE – MediaPipe Integration
+        // ===========================================================
+
+        function mcapInit() {
+            mcapCaptureDefaultPose();
+            ui.mcapUploadBtn.addEventListener('click', () => ui.mcapFileInput.click());
+            ui.mcapFileInput.addEventListener('change', mcapHandleFileSelected);
+            ui.mcapCloseBtn.addEventListener('click', mcapClose);
+            ui.mcapRecordBtn.addEventListener('click', mcapToggleRecording);
+            ui.mcapNeutralBtn.addEventListener('click', () => mcapCaptureNeutral());
+            ui.mcapSmoothing.addEventListener('input', () => {
+                mcap.smoothing = parseFloat(ui.mcapSmoothing.value) || 0;
+                ui.mcapSmoothingValue.textContent = mcap.smoothing.toFixed(2);
+            });
+            mcapWarmup();
+        }
+
+        function mcapCaptureDefaultPose() {
+            if (characters.length === 0) return;
+            const pose = {};
+            characters[0].traverse(obj => {
+                if (!obj.isGroup || !obj.name || !MCAP_JOINTS.includes(obj.name)) return;
+                pose[obj.name] = { position: obj.position.clone(), quaternion: obj.quaternion.clone() };
+            });
+            mcap.defaultPoseState = pose;
+            mcap.currentPoseState = mcapClonePose(pose);
+        }
+
+        function mcapClonePose(source) {
+            const pose = {};
+            MCAP_JOINTS.forEach(name => {
+                if (!source[name]) return;
+                pose[name] = { position: source[name].position.clone(), quaternion: source[name].quaternion.clone() };
+            });
+            return pose;
+        }
+
+        async function mcapWarmup() {
+            try {
+                await mcapEnsureLandmarker();
+                mcapSetStatus('MediaPipe ready. Upload a video to begin.', 'success');
+            } catch (err) {
+                console.error(err);
+                mcapSetStatus('MediaPipe failed to load. Check your connection.', 'error');
+            }
+        }
+
+        async function mcapEnsureLandmarker() {
+            if (mcap.poseLandmarker) return mcap.poseLandmarker;
+            mcapSetStatus('Loading MediaPipe pose model…', 'info');
+            const vision = await FilesetResolver.forVisionTasks(MCAP_WASM_ROOT);
+            const opts = {
+                baseOptions: { modelAssetPath: MCAP_MODEL_PATH, delegate: 'GPU' },
+                runningMode: 'VIDEO', numPoses: 1,
+                minPoseDetectionConfidence: 0.55,
+                minPosePresenceConfidence: 0.55,
+                minTrackingConfidence: 0.55
+            };
+            try {
+                mcap.poseLandmarker = await PoseLandmarker.createFromOptions(vision, opts);
+            } catch {
+                mcap.poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+                    ...opts, baseOptions: { ...opts.baseOptions, delegate: 'CPU' }
+                });
+            }
+            return mcap.poseLandmarker;
+        }
+
+        async function mcapHandleFileSelected(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            try {
+                await mcapEnsureLandmarker();
+                mcapStopProcessing();
+                if (mcap.isRecording) mcapStopRecording();
+                const url = URL.createObjectURL(file);
+                ui.mcapVideo.src = url;
+                ui.mcapVideo.controls = true;
+                mcap.lastProcessedTime = -1;
+                mcap.rootBaseline = null;
+                mcapCaptureDefaultPose();
+                ui.mcapPanel.classList.remove('hidden');
+                ui.mcapVideo.play().catch(() => {});
+                mcapStartProcessing();
+                mcapSetStatus('Video loaded. Let the skeleton lock on, then hit Start Record.', 'success');
+                ui.mcapFileInput.value = '';
+            } catch (err) {
+                console.error(err);
+                mcapSetStatus('Could not load the video file.', 'error');
+                ui.mcapFileInput.value = '';
+            }
+        }
+
+        function mcapStartProcessing() {
+            if (mcap.animFrameId) cancelAnimationFrame(mcap.animFrameId);
+            mcap.animFrameId = requestAnimationFrame(mcapProcessFrame);
+        }
+
+        function mcapStopProcessing() {
+            if (mcap.animFrameId) {
+                cancelAnimationFrame(mcap.animFrameId);
+                mcap.animFrameId = 0;
+            }
+            mcap.lastProcessedTime = -1;
+            mcap.latestPosePacket = null;
+            mcapClearOverlay();
+        }
+
+        function mcapClose() {
+            mcapStopProcessing();
+            if (mcap.isRecording) mcapStopRecording();
+            ui.mcapVideo.pause();
+            ui.mcapVideo.src = '';
+            ui.mcapPanel.classList.add('hidden');
+            ui.mcapTracked.textContent = 'Waiting';
+            mcapSetBadge('idle');
+            mcapSetStatus('Upload a video to begin.', 'info');
+        }
+
+        function mcapProcessFrame() {
+            mcap.animFrameId = requestAnimationFrame(mcapProcessFrame);
+            if (!mcap.poseLandmarker) return;
+            if (ui.mcapVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+            if (ui.mcapVideo.currentTime === mcap.lastProcessedTime) return;
+            mcap.lastProcessedTime = ui.mcapVideo.currentTime;
+
+            let result;
+            try {
+                result = mcap.poseLandmarker.detectForVideo(ui.mcapVideo, performance.now());
+            } catch (err) {
+                console.error(err);
+                return;
+            }
+
+            const landmarks = result?.landmarks?.[0];
+            const worldLandmarks = result?.worldLandmarks?.[0];
+
+            if (!landmarks || !worldLandmarks) {
+                mcap.latestPosePacket = null;
+                ui.mcapTracked.textContent = 'Searching…';
+                mcapClearOverlay();
+                return;
+            }
+
+            mcap.latestPosePacket = { landmarks, worldLandmarks };
+            ui.mcapTracked.textContent = `Locked ${Math.round(mcapGetConfidence(landmarks) * 100)}%`;
+            mcapDrawOverlay(landmarks);
+
+            const targetPose = mcapBuildPose(landmarks, worldLandmarks);
+            if (!targetPose) return;
+
+            mcap.currentPoseState = mcapSmoothPose(mcap.currentPoseState, targetPose, mcap.smoothing);
+            applyPoseState(mcap.currentPoseState);
+            mcapSampleIfRecording();
+        }
+
+        function mcapBuildPose(landmarks, worldLandmarks) {
+            if (!mcapHasReliable(landmarks, MCAP_LM.LEFT_SHOULDER, MCAP_LM.RIGHT_SHOULDER) ||
+                !mcapHasReliable(landmarks, MCAP_LM.LEFT_HIP, MCAP_LM.RIGHT_HIP)) {
+                return null;
+            }
+
+            const base = mcap.currentPoseState || mcap.defaultPoseState;
+            if (!base) return null;
+            const pose = mcapClonePose(base);
+            const wqMap = mcapGetWorldQuatMap(pose);
+            const world = worldLandmarks.map(lm => lm ? new THREE.Vector3(lm.x, -lm.y, -lm.z) : null);
+
+            const hipsCenter = mcapMidVec(world[MCAP_LM.LEFT_HIP], world[MCAP_LM.RIGHT_HIP]);
+            const shouldersCenter = mcapMidVec(world[MCAP_LM.LEFT_SHOULDER], world[MCAP_LM.RIGHT_SHOULDER]);
+            const torsoUp = mcapDir(hipsCenter, shouldersCenter);
+            const bodyLeft = mcapAvgDir([
+                mcapDir(world[MCAP_LM.RIGHT_HIP], world[MCAP_LM.LEFT_HIP]),
+                mcapDir(world[MCAP_LM.RIGHT_SHOULDER], world[MCAP_LM.LEFT_SHOULDER])
+            ]);
+
+            if (torsoUp && bodyLeft) {
+                const q = mcapQuatFromBasis(bodyLeft, torsoUp);
+                mcapSetWorldQuat(pose, wqMap, 'Hips_0', q);
+                mcapSetWorldQuat(pose, wqMap, 'Spine_0', q);
+            }
+
+            const headLeft = mcapAvgDir([
+                mcapDir(world[MCAP_LM.RIGHT_EAR], world[MCAP_LM.LEFT_EAR]),
+                mcapDir(world[MCAP_LM.RIGHT_SHOULDER], world[MCAP_LM.LEFT_SHOULDER])
+            ]);
+            const headUp = mcapAvgDir([mcapDir(shouldersCenter, world[MCAP_LM.NOSE]), torsoUp]);
+            if (headLeft && headUp) {
+                mcapSetWorldQuat(pose, wqMap, 'Head_0', mcapQuatFromBasis(headLeft, headUp));
+            }
+
+            mcapApplyLimbDir(pose, wqMap, 'Left_Upper_Arm_0',  mcapDir(world[MCAP_LM.LEFT_SHOULDER],  world[MCAP_LM.LEFT_ELBOW]));
+            mcapApplyLimbDir(pose, wqMap, 'Left_Lower_Arm_0',  mcapDir(world[MCAP_LM.LEFT_ELBOW],     world[MCAP_LM.LEFT_WRIST]));
+            mcapApplyLimbDir(pose, wqMap, 'Right_Upper_Arm_0', mcapDir(world[MCAP_LM.RIGHT_SHOULDER], world[MCAP_LM.RIGHT_ELBOW]));
+            mcapApplyLimbDir(pose, wqMap, 'Right_Lower_Arm_0', mcapDir(world[MCAP_LM.RIGHT_ELBOW],    world[MCAP_LM.RIGHT_WRIST]));
+            mcapApplyLimbDir(pose, wqMap, 'Left_Upper_Leg_0',  mcapDir(world[MCAP_LM.LEFT_HIP],       world[MCAP_LM.LEFT_KNEE]));
+            mcapApplyLimbDir(pose, wqMap, 'Left_Lower_Leg_0',  mcapDir(world[MCAP_LM.LEFT_KNEE],      world[MCAP_LM.LEFT_ANKLE]));
+            mcapApplyLimbDir(pose, wqMap, 'Right_Upper_Leg_0', mcapDir(world[MCAP_LM.RIGHT_HIP],      world[MCAP_LM.RIGHT_KNEE]));
+            mcapApplyLimbDir(pose, wqMap, 'Right_Lower_Leg_0', mcapDir(world[MCAP_LM.RIGHT_KNEE],     world[MCAP_LM.RIGHT_ANKLE]));
+
+            pose.Hips_0.position.copy(mcapComputeRootPos(landmarks));
+            return pose;
+        }
+
+        function mcapApplyLimbDir(pose, wqMap, jointName, direction) {
+            if (!direction) return;
+            mcapSetWorldQuat(pose, wqMap, jointName, new THREE.Quaternion().setFromUnitVectors(MCAP_DOWN, direction));
+        }
+
+        function mcapComputeRootPos(landmarks) {
+            const base = mcap.defaultPoseState?.Hips_0?.position?.clone() ?? MCAP_ROOT_BASE.clone();
+            const lh = landmarks[MCAP_LM.LEFT_HIP];
+            const rh = landmarks[MCAP_LM.RIGHT_HIP];
+            const ls = landmarks[MCAP_LM.LEFT_SHOULDER];
+            const rs = landmarks[MCAP_LM.RIGHT_SHOULDER];
+            if (!lh || !rh || !ls || !rs) return base;
+
+            const hipCenter = { x: (lh.x + rh.x) * 0.5, y: (lh.y + rh.y) * 0.5 };
+            const shoulderSpan = Math.hypot(ls.x - rs.x, ls.y - rs.y);
+
+            if (!mcap.rootBaseline) {
+                mcap.rootBaseline = { x: hipCenter.x, y: hipCenter.y, shoulderSpan: shoulderSpan || 0.2 };
+            }
+
+            const deltaX   = (hipCenter.x - mcap.rootBaseline.x) * 8;
+            const deltaY   = (mcap.rootBaseline.y - hipCenter.y) * 10;
+            const depthDelta = (shoulderSpan - mcap.rootBaseline.shoulderSpan) * 9;
+
+            return new THREE.Vector3(
+                THREE.MathUtils.clamp(MCAP_ROOT_BASE.x + deltaX,   -4.5, 4.5),
+                THREE.MathUtils.clamp(MCAP_ROOT_BASE.y + deltaY,    1.1,  6.4),
+                THREE.MathUtils.clamp(MCAP_ROOT_BASE.z + depthDelta, -3.25, 3.25)
+            );
+        }
+
+        function mcapSmoothPose(prev, next, smoothing) {
+            if (!prev) return mcapClonePose(next);
+            const alpha = THREE.MathUtils.clamp(1 - smoothing, 0.05, 1);
+            const pose = mcapClonePose(prev);
+            MCAP_JOINTS.forEach(name => {
+                if (!pose[name] || !next[name]) return;
+                pose[name].position.lerp(next[name].position, alpha);
+                pose[name].quaternion.slerp(next[name].quaternion, alpha).normalize();
+            });
+            return pose;
+        }
+
+        function mcapGetWorldQuatMap(pose) {
+            const map = {};
+            MCAP_JOINTS.forEach(name => {
+                const parent = MCAP_PARENTS[name];
+                map[name] = parent
+                    ? map[parent].clone().multiply(pose[name].quaternion)
+                    : pose[name].quaternion.clone();
+            });
+            return map;
+        }
+
+        function mcapSetWorldQuat(pose, wqMap, jointName, worldQuat) {
+            const parent = MCAP_PARENTS[jointName];
+            if (parent) {
+                pose[jointName].quaternion.copy(wqMap[parent].clone().invert().multiply(worldQuat)).normalize();
+            } else {
+                pose[jointName].quaternion.copy(worldQuat).normalize();
+            }
+            wqMap[jointName] = worldQuat.clone();
+        }
+
+        function mcapQuatFromBasis(leftAxis, upAxis) {
+            const yAxis = upAxis.clone().normalize();
+            let xAxis = leftAxis.clone();
+            xAxis.sub(yAxis.clone().multiplyScalar(xAxis.dot(yAxis)));
+            if (xAxis.lengthSq() < 1e-8) {
+                xAxis = Math.abs(yAxis.y) < 0.95 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(0, 0, 1);
+                xAxis.sub(yAxis.clone().multiplyScalar(xAxis.dot(yAxis)));
+            }
+            if (xAxis.lengthSq() < 1e-8) return new THREE.Quaternion();
+            xAxis.normalize();
+            const zAxis = new THREE.Vector3().crossVectors(xAxis, yAxis).normalize();
+            const cx = new THREE.Vector3().crossVectors(yAxis, zAxis).normalize();
+            return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(cx, yAxis, zAxis));
+        }
+
+        function mcapSampleIfRecording() {
+            if (!mcap.isRecording) return;
+            const videoTime = ui.mcapVideo.currentTime;
+            const interval = 1 / (mcap.sampleRate || 10);
+            if (videoTime < mcap.lastSampledTime + interval - 0.001) return;
+            mcap.lastSampledTime = videoTime;
+
+            const time = roundTime(videoTime);
+            const pose = capturePose();
+
+            const existingKf = keyframes.find(k => Math.abs(k.time - time) < 0.001);
+            if (existingKf) {
+                existingKf.pose = pose;
+            } else {
+                keyframes.push({ id: nextKeyframeId++, time, pose });
+                sortKeyframes();
+            }
+
+            currentTime = time;
+            ensureTimelineCovers(currentTime);
+            refreshTimelineUi();
+        }
+
+        function mcapToggleRecording() {
+            if (mcap.isRecording) {
+                mcapStopRecording();
+            } else {
+                mcapStartRecording();
+            }
+        }
+
+        function mcapStartRecording() {
+            if (!mcap.latestPosePacket) {
+                mcapSetStatus('Wait for pose tracking to lock before recording.', 'error');
+                return;
+            }
+            mcap.isRecording = true;
+            mcap.lastSampledTime = -Infinity;
+            mcapCaptureNeutral({ quiet: true });
+            ui.mcapRecordBtn.textContent = 'Stop Record';
+            ui.mcapRecordBtn.className = 'flex-1 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold py-1.5 rounded-lg transition-colors';
+            mcapSetBadge('recording');
+            mcapSetStatus('Recording — keyframes are being written to the timeline as the video plays.', 'success');
+        }
+
+        function mcapStopRecording() {
+            mcap.isRecording = false;
+            ui.mcapRecordBtn.textContent = 'Start Record';
+            ui.mcapRecordBtn.className = 'flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold py-1.5 rounded-lg transition-colors';
+            mcapSetBadge('idle');
+            mcapSetStatus(`Recording stopped. ${keyframes.length} keyframe(s) in timeline.`, 'success');
+        }
+
+        function mcapCaptureNeutral(options = {}) {
+            if (!mcap.latestPosePacket) {
+                if (!options.quiet) mcapSetStatus('Need a tracked pose to set neutral.', 'error');
+                return;
+            }
+            const { landmarks } = mcap.latestPosePacket;
+            const lh = landmarks[MCAP_LM.LEFT_HIP];
+            const rh = landmarks[MCAP_LM.RIGHT_HIP];
+            const ls = landmarks[MCAP_LM.LEFT_SHOULDER];
+            const rs = landmarks[MCAP_LM.RIGHT_SHOULDER];
+            const hipCenter = { x: (lh.x + rh.x) * 0.5, y: (lh.y + rh.y) * 0.5 };
+            mcap.rootBaseline = {
+                x: hipCenter.x, y: hipCenter.y,
+                shoulderSpan: Math.hypot(ls.x - rs.x, ls.y - rs.y) || 0.2
+            };
+            if (!options.quiet) mcapSetStatus('Neutral set. Root motion is relative to this frame.', 'success');
+        }
+
+        function mcapGetConfidence(landmarks) {
+            const indices = [
+                MCAP_LM.LEFT_SHOULDER, MCAP_LM.RIGHT_SHOULDER,
+                MCAP_LM.LEFT_ELBOW,    MCAP_LM.RIGHT_ELBOW,
+                MCAP_LM.LEFT_HIP,      MCAP_LM.RIGHT_HIP,
+                MCAP_LM.LEFT_KNEE,     MCAP_LM.RIGHT_KNEE
+            ];
+            const scores = indices.map(i => landmarks[i]?.visibility).filter(Number.isFinite);
+            if (!scores.length) return 0;
+            return scores.reduce((s, v) => s + v, 0) / scores.length;
+        }
+
+        function mcapHasReliable(landmarks, a, b) {
+            return mcapIsReliable(landmarks[a]) && mcapIsReliable(landmarks[b]);
+        }
+
+        function mcapIsReliable(lm) {
+            return !!lm && (lm.visibility ?? 1) >= 0.45;
+        }
+
+        function mcapMidVec(a, b) {
+            if (!a || !b) return null;
+            return a.clone().add(b).multiplyScalar(0.5);
+        }
+
+        function mcapDir(start, end) {
+            if (!start || !end) return null;
+            const d = end.clone().sub(start);
+            if (d.lengthSq() < 1e-8) return null;
+            return d.normalize();
+        }
+
+        function mcapAvgDir(vecs) {
+            const sum = new THREE.Vector3();
+            let count = 0;
+            vecs.forEach(v => { if (v && v.lengthSq() >= 1e-8) { sum.add(v); count++; } });
+            if (!count || sum.lengthSq() < 1e-8) return null;
+            return sum.normalize();
+        }
+
+        function mcapDrawOverlay(landmarks) {
+            const canvas = ui.mcapOverlay;
+            const w = canvas.clientWidth || 1;
+            const h = canvas.clientHeight || 1;
+            if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, w, h);
+
+            const vw = ui.mcapVideo.videoWidth || 1;
+            const vh = ui.mcapVideo.videoHeight || 1;
+            const rect = mcapContainedRect(w, h, vw, vh);
+
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = 'rgba(34,211,238,0.95)';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = 'rgba(34,211,238,0.45)';
+
+            MCAP_CONNECTIONS.forEach(([si, ei]) => {
+                const sl = landmarks[si];
+                const el = landmarks[ei];
+                if (!mcapIsReliable(sl) || !mcapIsReliable(el)) return;
+                ctx.beginPath();
+                ctx.moveTo(rect.x + sl.x * rect.w, rect.y + sl.y * rect.h);
+                ctx.lineTo(rect.x + el.x * rect.w, rect.y + el.y * rect.h);
+                ctx.stroke();
+            });
+
+            ctx.shadowBlur = 0;
+            landmarks.forEach(lm => {
+                if (!mcapIsReliable(lm)) return;
+                ctx.beginPath();
+                ctx.fillStyle = 'rgba(125,211,252,0.95)';
+                ctx.arc(rect.x + lm.x * rect.w, rect.y + lm.y * rect.h, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function mcapClearOverlay() {
+            const canvas = ui.mcapOverlay;
+            if (!canvas) return;
+            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function mcapContainedRect(cw, ch, vw, vh) {
+            const ca = cw / ch;
+            const va = vw / vh;
+            if (!Number.isFinite(va) || va <= 0) return { x: 0, y: 0, w: cw, h: ch };
+            if (va > ca) {
+                const h2 = cw / va;
+                return { x: 0, y: (ch - h2) / 2, w: cw, h: h2 };
+            }
+            const w2 = ch * va;
+            return { x: (cw - w2) / 2, y: 0, w: w2, h: ch };
+        }
+
+        function mcapSetBadge(state) {
+            if (state === 'recording') {
+                ui.mcapBadge.textContent = 'Recording';
+                ui.mcapBadge.className = 'inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-rose-400/10 border border-rose-400/20 text-rose-300';
+            } else {
+                ui.mcapBadge.textContent = 'Idle';
+                ui.mcapBadge.className = 'inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-emerald-400/10 border border-emerald-400/20 text-emerald-300';
+            }
+        }
+
+        function mcapSetStatus(message, tone = 'info') {
+            const classes = {
+                info:    'text-[10px] text-gray-500 leading-4 min-h-[2rem]',
+                success: 'text-[10px] text-emerald-400 leading-4 min-h-[2rem]',
+                error:   'text-[10px] text-rose-400 leading-4 min-h-[2rem]'
+            };
+            ui.mcapStatusText.className = classes[tone] || classes.info;
+            ui.mcapStatusText.textContent = message;
         }
 
         function animate() {

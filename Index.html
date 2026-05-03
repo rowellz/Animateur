@@ -319,19 +319,20 @@
             'Hips_0', 'Spine_0', 'Head_0',
             'Left_Upper_Arm_0', 'Left_Lower_Arm_0',
             'Right_Upper_Arm_0', 'Right_Lower_Arm_0',
-            'Left_Upper_Leg_0', 'Left_Lower_Leg_0',
-            'Right_Upper_Leg_0', 'Right_Lower_Leg_0'
+            'Left_Upper_Leg_0', 'Left_Lower_Leg_0', 'Left_Foot_0',
+            'Right_Upper_Leg_0', 'Right_Lower_Leg_0', 'Right_Foot_0'
         ];
         const MCAP_PARENTS = {
             Hips_0: null, Spine_0: 'Hips_0', Head_0: 'Spine_0',
             Left_Upper_Arm_0: 'Spine_0', Left_Lower_Arm_0: 'Left_Upper_Arm_0',
             Right_Upper_Arm_0: 'Spine_0', Right_Lower_Arm_0: 'Right_Upper_Arm_0',
-            Left_Upper_Leg_0: 'Hips_0', Left_Lower_Leg_0: 'Left_Upper_Leg_0',
-            Right_Upper_Leg_0: 'Hips_0', Right_Lower_Leg_0: 'Right_Upper_Leg_0'
+            Left_Upper_Leg_0: 'Hips_0', Left_Lower_Leg_0: 'Left_Upper_Leg_0', Left_Foot_0: 'Left_Lower_Leg_0',
+            Right_Upper_Leg_0: 'Hips_0', Right_Lower_Leg_0: 'Right_Upper_Leg_0', Right_Foot_0: 'Right_Lower_Leg_0'
         };
         const MCAP_CONNECTIONS = [
             [11,12],[11,13],[13,15],[12,14],[14,16],
             [11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28],
+            [27,29],[29,31],[27,31],[28,30],[30,32],[28,32],
             [0,11],[0,12]
         ];
         const MCAP_LM = {
@@ -341,7 +342,9 @@
             LEFT_WRIST:15, RIGHT_WRIST:16,
             LEFT_HIP:23, RIGHT_HIP:24,
             LEFT_KNEE:25, RIGHT_KNEE:26,
-            LEFT_ANKLE:27, RIGHT_ANKLE:28
+            LEFT_ANKLE:27, RIGHT_ANKLE:28,
+            LEFT_HEEL:29, RIGHT_HEEL:30,
+            LEFT_FOOT_INDEX:31, RIGHT_FOOT_INDEX:32
         };
         const mcap = {
             poseLandmarker: null,
@@ -2295,6 +2298,37 @@
             rLowerLeg.position.set(0, -1.1, 0);
             rUpperLeg.add(rLowerLeg);
 
+            // 6. Feet
+            const footW = 0.38;
+            const footH = 0.15;
+            const footD = 0.58;
+
+            const lFoot = new THREE.Group();
+            lFoot.name = 'Left_Foot_' + charId;
+            const lFootGeo = new THREE.BoxGeometry(footW, footH, footD);
+            lFootGeo.translate(0, -footH * 0.5, footD * 0.38); // pivot at ankle, extends forward
+            const lFootMesh = new THREE.Mesh(lFootGeo, material);
+            lFootMesh.castShadow = true;
+            lFootMesh.receiveShadow = true;
+            lFootMesh.userData.joint = lFoot;
+            lFoot.add(lFootMesh);
+            interactables.push(lFootMesh);
+            lFoot.position.set(0, -1.1, 0);
+            lLowerLeg.add(lFoot);
+
+            const rFoot = new THREE.Group();
+            rFoot.name = 'Right_Foot_' + charId;
+            const rFootGeo = new THREE.BoxGeometry(footW, footH, footD);
+            rFootGeo.translate(0, -footH * 0.5, footD * 0.38);
+            const rFootMesh = new THREE.Mesh(rFootGeo, material);
+            rFootMesh.castShadow = true;
+            rFootMesh.receiveShadow = true;
+            rFootMesh.userData.joint = rFoot;
+            rFoot.add(rFootMesh);
+            interactables.push(rFootMesh);
+            rFoot.position.set(0, -1.1, 0);
+            rLowerLeg.add(rFoot);
+
             // Default minor pose variation so it doesn't look completely rigid
             lUpperArm.rotation.z = 0.2;
             rUpperArm.rotation.z = -0.2;
@@ -2610,6 +2644,13 @@
             mcapApplyLimbDir(pose, wqMap, 'Left_Lower_Leg_0',  mcapDir(world[MCAP_LM.LEFT_KNEE],      world[MCAP_LM.LEFT_ANKLE]));
             mcapApplyLimbDir(pose, wqMap, 'Right_Upper_Leg_0', mcapDir(world[MCAP_LM.RIGHT_HIP],      world[MCAP_LM.RIGHT_KNEE]));
             mcapApplyLimbDir(pose, wqMap, 'Right_Lower_Leg_0', mcapDir(world[MCAP_LM.RIGHT_KNEE],     world[MCAP_LM.RIGHT_ANKLE]));
+            mcapApplyLimbDir(pose, wqMap, 'Left_Foot_0',       mcapDir(world[MCAP_LM.LEFT_ANKLE],     world[MCAP_LM.LEFT_FOOT_INDEX]));
+            mcapApplyLimbDir(pose, wqMap, 'Right_Foot_0',      mcapDir(world[MCAP_LM.RIGHT_ANKLE],    world[MCAP_LM.RIGHT_FOOT_INDEX]));
+
+            // Rotate feet to point downward (they naturally extend forward, need to rotate 90° on X)
+            const footXRotation = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+            pose.Left_Foot_0.quaternion.multiply(footXRotation);
+            pose.Right_Foot_0.quaternion.multiply(footXRotation);
 
             pose.Hips_0.position.copy(mcapComputeRootPos(landmarks));
             return pose;

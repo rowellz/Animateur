@@ -115,6 +115,15 @@
                             Save poses here. Export/import JSON.
                         </p>
                     </div>
+
+                    <!-- Body Segment Colors -->
+                    <div class="rounded-xl border border-white/10 bg-white/[0.03] p-2 space-y-1.5">
+                        <div class="flex items-center justify-between gap-2">
+                            <h2 class="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">Body Colors</h2>
+                            <span class="text-[10px] text-gray-500">Per segment</span>
+                        </div>
+                        <div id="body-colors-container" class="space-y-1 max-h-48 overflow-y-auto pr-1"></div>
+                    </div>
                 </div>
             </div>
 
@@ -342,6 +351,21 @@
         let orbitControls, transformControl;
         const interactables = []; 
         let characters = [];
+        const bodySegmentColors = {
+            'Hips': '#8A2BE2',
+            'Spine': '#4169E1',
+            'Neck': '#FFFF00',
+            'Left_Upper_Arm': '#DC143C',
+            'Left_Lower_Arm': '#FF6347',
+            'Right_Upper_Arm': '#006400',
+            'Right_Lower_Arm': '#32CD32',
+            'Left_Upper_Leg': '#008B8B',
+            'Left_Lower_Leg': '#00CED1',
+            'Right_Upper_Leg': '#FF8C00',
+            'Right_Lower_Leg': '#FFA500',
+            'Left_Foot': '#AFEEE',
+            'Right_Foot': '#FFDAB9'
+        };
         let selectedMesh = null;
         let selectedJoint = null;
         let translationHandle = null;
@@ -646,6 +670,9 @@
                 ui.expBoundingBoxSettings.classList.toggle('hidden', !ui.expBoundingBoxCheck.checked);
             });
 
+            // Build color UI
+            buildBodyColorUI();
+
             // Add first character
             createCharacter();
             refreshTimelineUi();
@@ -682,6 +709,7 @@
             ui.exportPoseBtn = document.getElementById('export-pose-btn');
             ui.importPoseBtn = document.getElementById('import-pose-btn');
             ui.deletePoseBtn = document.getElementById('delete-pose-btn');
+            ui.bodyColorsContainer = document.getElementById('body-colors-container');
             ui.animationNameInput = document.getElementById('animation-name-input');
             ui.animationLibrary = document.getElementById('animation-library');
             ui.saveAnimationBtn = document.getElementById('save-animation-btn');
@@ -2322,6 +2350,148 @@
             });
         }
 
+        function buildBodyColorUI() {
+            ui.bodyColorsContainer.innerHTML = '';
+            const segmentNames = Object.keys(bodySegmentColors);
+            
+            segmentNames.forEach(segment => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center gap-2 text-xs';
+                
+                const label = document.createElement('label');
+                label.className = 'text-gray-400 min-w-fit flex-1 truncate cursor-pointer hover:text-gray-300 transition-colors';
+                const displayName = segment.replace(/_/g, ' ');
+                label.textContent = displayName;
+                
+                const colorInput = document.createElement('input');
+                colorInput.type = 'color';
+                colorInput.value = bodySegmentColors[segment];
+                colorInput.className = 'w-8 h-6 rounded cursor-pointer border border-white/20 hover:border-white/40 transition-colors';
+                colorInput.addEventListener('change', () => {
+                    bodySegmentColors[segment] = colorInput.value;
+                    applyBodySegmentColor(segment);
+                });
+                colorInput.addEventListener('input', () => {
+                    bodySegmentColors[segment] = colorInput.value;
+                    applyBodySegmentColor(segment);
+                });
+                
+                row.appendChild(label);
+                row.appendChild(colorInput);
+                ui.bodyColorsContainer.appendChild(row);
+            });
+        }
+
+        function applyBodySegmentColor(segment) {
+            const color = new THREE.Color(bodySegmentColors[segment]);
+            
+            characters.forEach(character => {
+                character.traverse(obj => {
+                    if (!obj.isMesh) return;
+                    
+                    // Check if mesh has explicit segment name in userData
+                    if (obj.userData.segmentName === segment) {
+                        // Clone materials before changing colors
+                        if (Array.isArray(obj.material)) {
+                            obj.material = obj.material.map(mat => {
+                                const newMat = mat.clone();
+                                if (newMat.color) {
+                                    newMat.color.copy(color);
+                                }
+                                return newMat;
+                            });
+                        } else if (obj.material && obj.material.color) {
+                            const newMat = obj.material.clone();
+                            newMat.color.copy(color);
+                            obj.material = newMat;
+                        }
+                        return;
+                    }
+                    
+                    // Check if this mesh belongs to the target segment via parent/userData.joint
+                    let jointName = null;
+                    if (obj.userData.joint && obj.userData.joint.name) {
+                        jointName = obj.userData.joint.name;
+                    } else if (obj.parent && obj.parent.name) {
+                        jointName = obj.parent.name;
+                    }
+                    
+                    if (!jointName || !jointName.startsWith(segment + '_')) return;
+                    
+                    // Clone materials before changing colors to avoid affecting shared materials
+                    if (Array.isArray(obj.material)) {
+                        obj.material = obj.material.map(mat => {
+                            const newMat = mat.clone();
+                            if (newMat.color) {
+                                newMat.color.copy(color);
+                            }
+                            return newMat;
+                        });
+                    } else if (obj.material && obj.material.color) {
+                        const newMat = obj.material.clone();
+                        newMat.color.copy(color);
+                        obj.material = newMat;
+                    }
+                });
+            });
+        }
+
+        function applyBodySegmentColorsToCharacter(character) {
+            const segmentNames = Object.keys(bodySegmentColors);
+            
+            segmentNames.forEach(segment => {
+                const color = new THREE.Color(bodySegmentColors[segment]);
+                
+                character.traverse(obj => {
+                    if (!obj.isMesh) return;
+                    
+                    // Check if mesh has explicit segment name in userData
+                    if (obj.userData.segmentName === segment) {
+                        // Clone materials before changing colors
+                        if (Array.isArray(obj.material)) {
+                            obj.material = obj.material.map(mat => {
+                                const newMat = mat.clone();
+                                if (newMat.color) {
+                                    newMat.color.copy(color);
+                                }
+                                return newMat;
+                            });
+                        } else if (obj.material && obj.material.color) {
+                            const newMat = obj.material.clone();
+                            newMat.color.copy(color);
+                            obj.material = newMat;
+                        }
+                        return;
+                    }
+                    
+                    // Check if this mesh belongs to the target segment via parent/userData.joint
+                    let jointName = null;
+                    if (obj.userData.joint && obj.userData.joint.name) {
+                        jointName = obj.userData.joint.name;
+                    } else if (obj.parent && obj.parent.name) {
+                        jointName = obj.parent.name;
+                    }
+                    
+                    if (!jointName || !jointName.startsWith(segment + '_')) return;
+                    
+                    // Clone materials before changing colors to avoid affecting shared materials
+                    if (Array.isArray(obj.material)) {
+                        obj.material = obj.material.map(mat => {
+                            const newMat = mat.clone();
+                            if (newMat.color) {
+                                newMat.color.copy(color);
+                            }
+                            return newMat;
+                        });
+                    } else if (obj.material && obj.material.color) {
+                        const newMat = obj.material.clone();
+                        newMat.color.copy(color);
+                        obj.material = newMat;
+                    }
+                });
+            });
+        }
+
         function createLimb(width, height, depth, pivotYOffset, material, name, charId) {
             const group = new THREE.Group();
             group.name = name + "_" + charId;
@@ -2421,6 +2591,7 @@
                 const cylMesh = new THREE.Mesh(cylGeo, cylMat);
                 cylMesh.castShadow = true;
                 cylMesh.receiveShadow = true;
+                cylMesh.userData.segmentName = 'Spine';
                 cylMesh.position.set(0, topY, 0);
                 torsoMesh.add(cylMesh);
 
@@ -2569,6 +2740,7 @@
                 const lCylMesh = new THREE.Mesh(lCylGeo, lCylMat);
                 lCylMesh.castShadow = true;
                 lCylMesh.receiveShadow = true;
+                lCylMesh.userData.segmentName = 'Left_Upper_Arm';
                 lCylMesh.position.set(0, lTopY, 0);
                 lUpperArmMesh.add(lCylMesh);
 
@@ -2628,6 +2800,7 @@
                 const rCylMesh = new THREE.Mesh(rCylGeo, rCylMat);
                 rCylMesh.castShadow = true;
                 rCylMesh.receiveShadow = true;
+                rCylMesh.userData.segmentName = 'Right_Upper_Arm';
                 rCylMesh.position.set(0, rTopY, 0);
                 rUpperArmMesh.add(rCylMesh);
 
@@ -2829,6 +3002,10 @@
             rUpperLeg.rotation.x = -0.05;
 
             root.userData.characterColor = `#${color.getHexString()}`;
+            
+            // Apply per-segment colors
+            applyBodySegmentColorsToCharacter(root);
+            
             scene.add(root);
             characters.push(root);
             return root;
@@ -3782,3 +3959,16 @@
     </script>
 </body>
 </html>
+
+
+<!-- WMS wareshouse management solution -->
+
+<!-- RPA's robotic process automation -->
+
+<!-- ERP Enterprise resource  -->
+
+<!-- What is the appetite for AI solutions?  -->
+
+<!-- Has anything been built with AI yet?  -->
+
+<!-- What are some of your goals and what can i do to help reach those  -->

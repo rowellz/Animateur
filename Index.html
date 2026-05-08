@@ -53,6 +53,9 @@
         #mcap-panel { pointer-events: auto; }
         #mcap-video-wrapper { position: relative; background: #000; min-height: 168px; }
         #mcap-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        /* Draggable MCAP panel styling */
+        #mcap-panel { touch-action: none; cursor: grab; }
+        #mcap-panel.dragging { cursor: grabbing; }
     </style>
     <!-- Import Map for Three.js -->
     <script type="importmap">
@@ -108,37 +111,8 @@
                             <button id="delete-pose-btn" class="w-full bg-red-900/40 hover:bg-red-800/55 text-red-200 text-xs font-medium py-1 px-2 rounded-lg border border-red-900/40 transition-colors">Delete</button>
                         </div>
 
-                        <div class="rounded-xl border border-white/10 bg-white/[0.03] p-2 space-y-1.5">
-                            <div class="flex items-center justify-between gap-2">
-                                <h2 class="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">Animations</h2>
-                                <span class="text-[10px] text-gray-500">Save anim</span>
-                            </div>
-                            <input id="animation-name-input" type="text" placeholder="Animation name" class="w-full bg-white/10 border border-white/10 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-blue-400 placeholder:text-gray-500">
-                            <select id="animation-library" size="3" class="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-blue-400"></select>
-                            <div class="grid grid-cols-2 gap-1.5">
-                                <button id="save-animation-btn" class="bg-violet-600 hover:bg-violet-500 text-white text-xs font-medium py-1 px-2 rounded-lg transition-colors">Save</button>
-                                <button id="load-animation-btn" class="bg-white/10 hover:bg-white/15 text-white text-xs font-medium py-1 px-2 rounded-lg border border-white/10 transition-colors">Load</button>
-                                <button id="export-animation-btn" class="bg-white/10 hover:bg-white/15 text-white text-xs font-medium py-1 px-2 rounded-lg border border-white/10 transition-colors">Export</button>
-                                <button id="import-animation-btn" class="bg-white/10 hover:bg-white/15 text-white text-xs font-medium py-1 px-2 rounded-lg border border-white/10 transition-colors">Import</button>
-                            </div>
-                            <button id="delete-animation-btn" class="w-full bg-red-900/40 hover:bg-red-800/55 text-red-200 text-xs font-medium py-1 px-2 rounded-lg border border-red-900/40 transition-colors">Delete</button>
-                            <button id="mcap-upload-btn" class="w-full bg-cyan-700/70 hover:bg-cyan-600 text-white text-xs font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1.5">
-                                <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.069A1 1 0 0121 8.882v6.236a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                                Capture Motion
-                            </button>
-                            <a href="./ripper.html" target="_blank" rel="noopener noreferrer" class="block w-full bg-emerald-600/85 hover:bg-emerald-500 text-center text-white text-xs font-medium py-1 px-2 rounded-lg transition-colors">
-                                Ripper
-                            </a>
-                            <a href="./AutoRigScene.html" target="_blank" rel="noopener noreferrer" class="block w-full bg-amber-500/85 hover:bg-amber-400 text-center text-slate-950 text-xs font-semibold py-1 px-2 rounded-lg transition-colors">
-                                Open Auto Rig Scene
-                            </a>
-                            <a href="./Playground.html" target="_blank" rel="noopener noreferrer" class="block w-full bg-cyan-600/85 hover:bg-cyan-500 text-center text-white text-xs font-medium py-1 px-2 rounded-lg transition-colors">
-                                Playground
-                            </a>
-                        </div>
-
                         <p id="asset-status" class="text-xs text-gray-400 min-h-[1.75rem] leading-4">
-                            Save poses and anims here. Export/import JSON.
+                            Save poses here. Export/import JSON.
                         </p>
                     </div>
                 </div>
@@ -148,6 +122,38 @@
             <div id="selection-info" class="bg-black/60 backdrop-blur-md py-2 px-4 rounded-lg border border-white/10 shadow-xl hidden interactive-ui">
                 <span class="text-sm text-gray-300">Selected: </span>
                 <span id="selected-name" class="font-bold text-blue-400">None</span>
+            </div>
+
+            <!-- Animations Pane (Upper Right) -->
+            <div class="bg-black/60 backdrop-blur-md p-2 rounded-xl border border-white/10 shadow-xl interactive-ui w-56 max-h-[calc(100vh-2rem)] overflow-y-auto">
+                <div class="rounded-xl border border-white/10 bg-white/[0.03] p-2 space-y-1.5">
+                    <div class="flex items-center justify-between gap-2">
+                        <h2 class="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">Animations</h2>
+                        <span class="text-[10px] text-gray-500">Save anim</span>
+                    </div>
+                    <input id="animation-name-input" type="text" placeholder="Animation name" class="w-full bg-white/10 border border-white/10 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-blue-400 placeholder:text-gray-500">
+                    <select id="animation-library" size="3" class="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-blue-400"></select>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <button id="save-animation-btn" class="bg-violet-600 hover:bg-violet-500 text-white text-xs font-medium py-1 px-2 rounded-lg transition-colors">Save</button>
+                        <button id="load-animation-btn" class="bg-white/10 hover:bg-white/15 text-white text-xs font-medium py-1 px-2 rounded-lg border border-white/10 transition-colors">Load</button>
+                        <button id="export-animation-btn" class="bg-white/10 hover:bg-white/15 text-white text-xs font-medium py-1 px-2 rounded-lg border border-white/10 transition-colors">Export</button>
+                        <button id="import-animation-btn" class="bg-white/10 hover:bg-white/15 text-white text-xs font-medium py-1 px-2 rounded-lg border border-white/10 transition-colors">Import</button>
+                    </div>
+                    <button id="delete-animation-btn" class="w-full bg-red-900/40 hover:bg-red-800/55 text-red-200 text-xs font-medium py-1 px-2 rounded-lg border border-red-900/40 transition-colors">Delete</button>
+                    <button id="mcap-upload-btn" class="w-full bg-cyan-700/70 hover:bg-cyan-600 text-white text-xs font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1.5">
+                        <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.069A1 1 0 0121 8.882v6.236a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        Capture Motion
+                    </button>
+                    <!-- <a href="./ripper.html" target="_blank" rel="noopener noreferrer" class="block w-full bg-emerald-600/85 hover:bg-emerald-500 text-center text-white text-xs font-medium py-1 px-2 rounded-lg transition-colors">
+                        Ripper
+                    </a>
+                    <a href="./AutoRigScene.html" target="_blank" rel="noopener noreferrer" class="block w-full bg-amber-500/85 hover:bg-amber-400 text-center text-slate-950 text-xs font-semibold py-1 px-2 rounded-lg transition-colors">
+                        Open Auto Rig Scene
+                    </a>
+                    <a href="./Playground.html" target="_blank" rel="noopener noreferrer" class="block w-full bg-cyan-600/85 hover:bg-cyan-500 text-center text-white text-xs font-medium py-1 px-2 rounded-lg transition-colors">
+                        Playground
+                    </a> -->
+                </div>
             </div>
         </div>
 
@@ -217,8 +223,8 @@
     <input id="animation-import-input" type="file" accept=".json,application/json" class="hidden">
     <input id="mcap-file-input" type="file" accept="video/*" class="hidden">
 
-    <!-- Motion Capture Panel (upper right, shown after video upload) -->
-    <div id="mcap-panel" class="hidden fixed z-50" style="top:1rem;right:1rem;width:296px;">
+    <!-- Motion Capture Panel (lower right, shown after video upload) -->
+    <div id="mcap-panel" class="hidden fixed z-50" style="bottom:1rem;right:1rem;width:296px;">
         <div class="bg-black/85 backdrop-blur-md rounded-xl border border-white/10 shadow-2xl overflow-hidden">
             <div id="mcap-video-wrapper">
                 <video id="mcap-video" controls muted playsinline class="w-full block" style="max-height:220px;object-fit:contain;background:#000;display:block;"></video>
@@ -316,14 +322,14 @@
         const MCAP_ROOT_BASE = new THREE.Vector3(0, 2.6, 0);
         const MCAP_DOWN = new THREE.Vector3(0, -1, 0);
         const MCAP_JOINTS = [
-            'Hips_0', 'Spine_0', 'Head_0',
+            'Hips_0', 'Spine_0', 'Neck_0', 'Head_0',
             'Left_Upper_Arm_0', 'Left_Lower_Arm_0',
             'Right_Upper_Arm_0', 'Right_Lower_Arm_0',
             'Left_Upper_Leg_0', 'Left_Lower_Leg_0', 'Left_Foot_0',
             'Right_Upper_Leg_0', 'Right_Lower_Leg_0', 'Right_Foot_0'
         ];
         const MCAP_PARENTS = {
-            Hips_0: null, Spine_0: 'Hips_0', Head_0: 'Spine_0',
+            Hips_0: null, Spine_0: 'Hips_0', Neck_0: 'Spine_0', Head_0: 'Neck_0',
             Left_Upper_Arm_0: 'Spine_0', Left_Lower_Arm_0: 'Left_Upper_Arm_0',
             Right_Upper_Arm_0: 'Spine_0', Right_Lower_Arm_0: 'Right_Upper_Arm_0',
             Left_Upper_Leg_0: 'Hips_0', Left_Lower_Leg_0: 'Left_Upper_Leg_0', Left_Foot_0: 'Left_Lower_Leg_0',
@@ -2213,6 +2219,37 @@
             mesh.castShadow = true;
             mesh.receiveShadow = true;
             
+            // Add vertical-only outline (skip horizontal lines)
+            try {
+                const positions = geometry.attributes.position.array;
+                const index = geometry.index ? geometry.index.array : null;
+                const linePositions = [];
+                if (index) {
+                    for (let i = 0; i < index.length; i += 2) {
+                        const i1 = index[i] * 3;
+                        const i2 = index[i + 1] * 3;
+                        const x1 = positions[i1], y1 = positions[i1 + 1], z1 = positions[i1 + 2];
+                        const x2 = positions[i2], y2 = positions[i2 + 1], z2 = positions[i2 + 2];
+                        const xDiff = Math.abs(x2 - x1);
+                        const zDiff = Math.abs(z2 - z1);
+                        const yDiff = Math.abs(y2 - y1);
+                        // treat as vertical if X and Z nearly equal, Y differs sufficiently
+                        if (xDiff < 0.02 && zDiff < 0.02 && yDiff > 0.05) {
+                            linePositions.push(x1, y1, z1, x2, y2, z2);
+                        }
+                    }
+                }
+                if (linePositions.length > 0) {
+                    const verticalGeo = new THREE.BufferGeometry();
+                    verticalGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(linePositions), 3));
+                    const edgesMat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                    const lines = new THREE.LineSegments(verticalGeo, edgesMat);
+                    mesh.add(lines);
+                }
+            } catch (e) {
+                console.warn('Failed to create vertical edges for', name, e);
+            }
+
             // Link mesh to its parent joint group for raycasting logic
             mesh.userData.joint = group;
             group.add(mesh);
@@ -2247,35 +2284,293 @@
             root.position.set(x, 2.6, z);
             
             // 2. Torso (Spine)
-            const torso = createLimb(0.9, 1.2, 0.5, 0.6, material, "Spine", charId);
+            // Make torso match hips width/depth for consistent silhouette
+            const torso = createLimb(1.0, 0.85, 0.6, 0.42, material, "Spine", charId);
             torso.position.set(0, 0.2, 0); // Attached slightly above hip center
             root.add(torso);
             
-            // 3. Head
-            const head = createLimb(0.7, 0.8, 0.7, 0.4, material, "Head", charId);
-            head.position.set(0, 1.2, 0); // Attached to top of torso
-            torso.add(head);
+            // Add top cylinder to torso for "Box + Top Cylinder" effect
+            const torsoMesh = torso.children[0]; // Get the mesh from the group
+            if (torsoMesh && torsoMesh.geometry) {
+                torsoMesh.geometry.computeBoundingBox();
+                const bbox = torsoMesh.geometry.boundingBox;
+                const depth = bbox.max.z - bbox.min.z;
+                const width = bbox.max.x - bbox.min.x;
+                const topY = bbox.max.y;
+
+                const radius = depth / 2;
+                const length = width * 0.975;
+                const cylGeo = new THREE.CylinderGeometry(radius, radius, length, 32, 1, false);
+                cylGeo.rotateZ(Math.PI / 2); // align axis along X
+                const cylMat = material.clone();
+                const cylMesh = new THREE.Mesh(cylGeo, cylMat);
+                cylMesh.castShadow = true;
+                cylMesh.receiveShadow = true;
+                cylMesh.position.set(0, topY, 0);
+                torsoMesh.add(cylMesh);
+
+                // Add circular edge outlines to the cylinder (keep cylinder outlines)
+                try {
+                    const cylCirclePositions = [];
+                    const segments = 32;
+                    const cylRadius = radius;
+
+                    // Front circle
+                    for (let j = 0; j <= segments; j++) {
+                        const angle = (j / segments) * Math.PI * 2;
+                        const y = Math.cos(angle) * cylRadius;
+                        const z = Math.sin(angle) * cylRadius;
+                        cylCirclePositions.push(length/2, y, z);
+                    }
+
+                    // Back circle
+                    for (let j = 0; j <= segments; j++) {
+                        const angle = (j / segments) * Math.PI * 2;
+                        const y = Math.cos(angle) * cylRadius;
+                        const z = Math.sin(angle) * cylRadius;
+                        cylCirclePositions.push(-length/2, y, z);
+                    }
+
+                    if (cylCirclePositions.length > 0) {
+                        const circleGeometry = new THREE.BufferGeometry();
+                        circleGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(cylCirclePositions), 3));
+                        const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                        const circleLines = new THREE.Line(circleGeometry, edgesMaterial);
+                        cylMesh.add(circleLines);
+                    }
+                } catch (e) { console.warn('Failed to add cylinder outlines', e); }
+            }
+            
+            // 3. Neck + Head
+            // Make the neck a cylinder so it sits nicely on top of the rounded shoulders
+            const neck = new THREE.Group();
+            neck.name = 'Neck_' + charId;
+            // match previous neck height used for head placement (0.24)
+            const neckRadius = 0.12;
+            const neckGeo = new THREE.CylinderGeometry(neckRadius, neckRadius, 0.24, 8);
+            // translate so the group's origin acts as the joint pivot at the base
+            neckGeo.translate(0, 0.12, 0);
+            const neckMat = material.clone();
+            const neckMesh = new THREE.Mesh(neckGeo, neckMat);
+            neckMesh.castShadow = true;
+            neckMesh.receiveShadow = true;
+            neckMesh.userData.joint = neck;
+            // Add vertical-only outline to neck (skip horizontal edges)
+            try {
+                const positions = neckGeo.attributes.position.array;
+                const index = neckGeo.index ? neckGeo.index.array : null;
+                const linePositions = [];
+                if (index) {
+                    for (let i = 0; i < index.length; i += 2) {
+                        const i1 = index[i] * 3;
+                        const i2 = index[i+1] * 3;
+                        const x1 = positions[i1], y1 = positions[i1+1], z1 = positions[i1+2];
+                        const x2 = positions[i2], y2 = positions[i2+1], z2 = positions[i2+2];
+                        const xDiff = Math.abs(x2 - x1);
+                        const zDiff = Math.abs(z2 - z1);
+                        const yDiff = Math.abs(y2 - y1);
+                        if (xDiff < 0.02 && zDiff < 0.02 && yDiff > 0.03) {
+                            linePositions.push(x1, y1, z1, x2, y2, z2);
+                        }
+                    }
+                }
+                if (linePositions.length > 0) {
+                    const vGeo = new THREE.BufferGeometry();
+                    vGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(linePositions), 3));
+                    const vMat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                    const vLines = new THREE.LineSegments(vGeo, vMat);
+                    neckMesh.add(vLines);
+                }
+            } catch (e) { console.warn('Failed to add neck vertical edges', e); }
+            neck.add(neckMesh);
+            interactables.push(neckMesh);
+            neck.position.set(0, 1.10, 0); // Attached to top of torso/cylinder
+            torso.add(neck);
+            // Create an 8-sided head (matching +page.svelte) with per-side colors
+            const head = new THREE.Group();
+            head.name = 'Head_' + charId;
+            const neckHeight = 0.24;
+            const headRadius = 0.30;
+            const headHeight = 0.48; // make the head shorter
+            const headGeo = new THREE.CylinderGeometry(headRadius, headRadius, headHeight, 8, 1, false);
+            headGeo.rotateY(Math.PI / 8);
+            headGeo.translate(0, headHeight * 0.5, 0);
+
+            // Define the same 8 side colors used in +page.svelte
+            const sideColors = ['#800000', '#ff8800', '#333333', '#00ff00', '#00ffff', '#0000ff', '#ff00ff', '#8800ff'];
+            // cap color (matches +page.svelte fallback)
+            const capColor = '#111111';
+
+            // Ensure groups align with side faces (each side uses 6 indices in this geometry)
+            if (typeof headGeo.clearGroups === 'function') {
+                headGeo.clearGroups();
+                for (let i = 0; i < 8; i++) {
+                    headGeo.addGroup(i * 6, 6, i);
+                }
+                const capStartIndex = 48; // matches pattern in +page.svelte
+                const capCount = headGeo.index ? (headGeo.index.count - capStartIndex) : 0;
+                if (capCount > 0) headGeo.addGroup(capStartIndex, capCount, 8);
+            }
+
+            const materials = sideColors.map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.4, metalness: 0.1 }));
+            materials.push(new THREE.MeshStandardMaterial({ color: capColor, roughness: 0.6, metalness: 0.05 }));
+
+            const headMesh = new THREE.Mesh(headGeo, materials);
+            headMesh.castShadow = true;
+            headMesh.receiveShadow = true;
+            headMesh.userData.joint = head;
+            // Add vertical-only outline to head (skip horizontal edges)
+            try {
+                const positions = headGeo.attributes.position.array;
+                const index = headGeo.index ? headGeo.index.array : null;
+                const linePositions = [];
+                if (index) {
+                    for (let i = 0; i < index.length; i += 2) {
+                        const i1 = index[i] * 3;
+                        const i2 = index[i+1] * 3;
+                        const x1 = positions[i1], y1 = positions[i1+1], z1 = positions[i1+2];
+                        const x2 = positions[i2], y2 = positions[i2+1], z2 = positions[i2+2];
+                        const xDiff = Math.abs(x2 - x1);
+                        const zDiff = Math.abs(z2 - z1);
+                        const yDiff = Math.abs(y2 - y1);
+                        if (xDiff < 0.02 && zDiff < 0.02 && yDiff > 0.03) {
+                            linePositions.push(x1, y1, z1, x2, y2, z2);
+                        }
+                    }
+                }
+                if (linePositions.length > 0) {
+                    const vGeo = new THREE.BufferGeometry();
+                    vGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(linePositions), 3));
+                    const vMat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                    const vLines = new THREE.LineSegments(vGeo, vMat);
+                    headMesh.add(vLines);
+                }
+            } catch (e) { console.warn('Failed to add head vertical edges', e); }
+            head.add(headMesh);
+            interactables.push(headMesh);
+            head.position.set(0, neckHeight, 0); // Attached to top of neck
+            neck.add(head);
 
             // 4. Arms
             const armW = 0.25;
             
             // Left Arm
             const lUpperArm = createLimb(armW, 0.9, armW, -0.45, material, "Left_Upper_Arm", charId);
-            lUpperArm.position.set(0.6, 1.1, 0); // Right side of torso (viewer left)
+            lUpperArm.position.set(0.6, 0.90, 0); // Right side of torso (viewer left)
             torso.add(lUpperArm);
             
             const lLowerArm = createLimb(armW*0.9, 0.9, armW*0.9, -0.45, material, "Left_Lower_Arm", charId);
             lLowerArm.position.set(0, -0.9, 0); // End of upper arm
             lUpperArm.add(lLowerArm);
 
+            // Add top cylinder to left upper arm
+            const lUpperArmMesh = lUpperArm.children[0];
+            if (lUpperArmMesh && lUpperArmMesh.geometry) {
+                lUpperArmMesh.geometry.computeBoundingBox();
+                const lBbox = lUpperArmMesh.geometry.boundingBox;
+                const lWidth = lBbox.max.x - lBbox.min.x;
+                const lDepth = lBbox.max.z - lBbox.min.z;
+                const lTopY = lBbox.max.y;
+
+                const lRadius = lWidth / 2;
+                const lLength = lDepth * 0.97;
+                const lCylGeo = new THREE.CylinderGeometry(lRadius, lRadius, lLength, 32, 1, false);
+                lCylGeo.rotateZ(Math.PI / 2);
+                const lCylMat = material.clone();
+                const lCylMesh = new THREE.Mesh(lCylGeo, lCylMat);
+                lCylMesh.castShadow = true;
+                lCylMesh.receiveShadow = true;
+                lCylMesh.position.set(0, lTopY, 0);
+                lUpperArmMesh.add(lCylMesh);
+
+                // Add circular edge outlines for left arm top cylinder
+                try {
+                    const lCylCirclePositions = [];
+                    const lSegments = 32;
+                    const lCylRadius = lRadius;
+
+                    for (let j = 0; j <= lSegments; j++) {
+                        const angle = (j / lSegments) * Math.PI * 2;
+                        const x = Math.cos(angle) * lCylRadius;
+                        const y = Math.sin(angle) * lCylRadius;
+                        lCylCirclePositions.push(lLength/2, x, y);
+                    }
+
+                    for (let j = 0; j <= lSegments; j++) {
+                        const angle = (j / lSegments) * Math.PI * 2;
+                        const x = Math.cos(angle) * lCylRadius;
+                        const y = Math.sin(angle) * lCylRadius;
+                        lCylCirclePositions.push(-lLength/2, x, y);
+                    }
+
+                    if (lCylCirclePositions.length > 0) {
+                        const lCircleGeometry = new THREE.BufferGeometry();
+                        lCircleGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(lCylCirclePositions), 3));
+                        const lEdgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                        const lCircleLines = new THREE.Line(lCircleGeometry, lEdgesMaterial);
+                        lCylMesh.add(lCircleLines);
+                    }
+                } catch (e) { console.warn('Failed to add left arm cylinder outlines', e); }
+            }
+
             // Right Arm
             const rUpperArm = createLimb(armW, 0.9, armW, -0.45, material, "Right_Upper_Arm", charId);
-            rUpperArm.position.set(-0.6, 1.1, 0); // Left side of torso
+            rUpperArm.position.set(-0.6, 0.90, 0); // Left side of torso
             torso.add(rUpperArm);
             
             const rLowerArm = createLimb(armW*0.9, 0.9, armW*0.9, -0.45, material, "Right_Lower_Arm", charId);
             rLowerArm.position.set(0, -0.9, 0);
             rUpperArm.add(rLowerArm);
+
+            // Add top cylinder to right upper arm
+            const rUpperArmMesh = rUpperArm.children[0];
+            if (rUpperArmMesh && rUpperArmMesh.geometry) {
+                rUpperArmMesh.geometry.computeBoundingBox();
+                const rBbox = rUpperArmMesh.geometry.boundingBox;
+                const rWidth = rBbox.max.x - rBbox.min.x;
+                const rDepth = rBbox.max.z - rBbox.min.z;
+                const rTopY = rBbox.max.y;
+
+                const rRadius = rWidth / 2;
+                const rLength = rDepth * 0.97;
+                const rCylGeo = new THREE.CylinderGeometry(rRadius, rRadius, rLength, 32, 1, false);
+                rCylGeo.rotateZ(Math.PI / 2);
+                const rCylMat = material.clone();
+                const rCylMesh = new THREE.Mesh(rCylGeo, rCylMat);
+                rCylMesh.castShadow = true;
+                rCylMesh.receiveShadow = true;
+                rCylMesh.position.set(0, rTopY, 0);
+                rUpperArmMesh.add(rCylMesh);
+
+                // Add circular edge outlines for right arm top cylinder
+                try {
+                    const rCylCirclePositions = [];
+                    const rSegments = 32;
+                    const rCylRadius = rRadius;
+
+                    for (let j = 0; j <= rSegments; j++) {
+                        const angle = (j / rSegments) * Math.PI * 2;
+                        const x = Math.cos(angle) * rCylRadius;
+                        const y = Math.sin(angle) * rCylRadius;
+                        rCylCirclePositions.push(rLength/2, x, y);
+                    }
+
+                    for (let j = 0; j <= rSegments; j++) {
+                        const angle = (j / rSegments) * Math.PI * 2;
+                        const x = Math.cos(angle) * rCylRadius;
+                        const y = Math.sin(angle) * rCylRadius;
+                        rCylCirclePositions.push(-rLength/2, x, y);
+                    }
+
+                    if (rCylCirclePositions.length > 0) {
+                        const rCircleGeometry = new THREE.BufferGeometry();
+                        rCircleGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(rCylCirclePositions), 3));
+                        const rEdgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                        const rCircleLines = new THREE.Line(rCircleGeometry, rEdgesMaterial);
+                        rCylMesh.add(rCircleLines);
+                    }
+                } catch (e) { console.warn('Failed to add right arm cylinder outlines', e); }
+            }
 
             // 5. Legs
             const legW = 0.35;
@@ -2311,6 +2606,61 @@
             lFootMesh.castShadow = true;
             lFootMesh.receiveShadow = true;
             lFootMesh.userData.joint = lFoot;
+            // Add vertical-only outline to left foot (skip horizontal edges)
+            try {
+                const positions = lFootGeo.attributes.position.array;
+                const index = lFootGeo.index ? lFootGeo.index.array : null;
+                const linePositions = [];
+                if (index) {
+                    for (let i = 0; i < index.length; i += 2) {
+                        const i1 = index[i] * 3;
+                        const i2 = index[i+1] * 3;
+                        const x1 = positions[i1], y1 = positions[i1+1], z1 = positions[i1+2];
+                        const x2 = positions[i2], y2 = positions[i2+1], z2 = positions[i2+2];
+                        const xDiff = Math.abs(x2 - x1);
+                        const zDiff = Math.abs(z2 - z1);
+                        const yDiff = Math.abs(y2 - y1);
+                        if (xDiff < 0.02 && zDiff < 0.02 && yDiff > 0.03) {
+                            linePositions.push(x1, y1, z1, x2, y2, z2);
+                        }
+                    }
+                }
+                if (linePositions.length > 0) {
+                    const vGeo = new THREE.BufferGeometry();
+                    vGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(linePositions), 3));
+                    const vMat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                    const vLines = new THREE.LineSegments(vGeo, vMat);
+                    lFootMesh.add(vLines);
+                }
+            } catch (e) { console.warn('Failed foot vertical edges', e); }
+            // Add horizontal outlines for foot (top/bottom edges)
+            try {
+                const positionsH = lFootGeo.attributes.position.array;
+                const indexH = lFootGeo.index ? lFootGeo.index.array : null;
+                const horizPositions = [];
+                if (indexH) {
+                    for (let i = 0; i < indexH.length; i += 2) {
+                        const i1 = indexH[i] * 3;
+                        const i2 = indexH[i + 1] * 3;
+                        const x1 = positionsH[i1], y1 = positionsH[i1 + 1], z1 = positionsH[i1 + 2];
+                        const x2 = positionsH[i2], y2 = positionsH[i2 + 1], z2 = positionsH[i2 + 2];
+                        const xDiff = Math.abs(x2 - x1);
+                        const zDiff = Math.abs(z2 - z1);
+                        const yDiff = Math.abs(y2 - y1);
+                        // horizontal if Y nearly equal and edge is axis-aligned (avoid diagonals)
+                        if (yDiff < 0.02 && ((xDiff > 0.02 && zDiff < 0.02) || (zDiff > 0.02 && xDiff < 0.02))) {
+                            horizPositions.push(x1, y1, z1, x2, y2, z2);
+                        }
+                    }
+                }
+                if (horizPositions.length > 0) {
+                    const hGeo = new THREE.BufferGeometry();
+                    hGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(horizPositions), 3));
+                    const hMat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                    const hLines = new THREE.LineSegments(hGeo, hMat);
+                    lFootMesh.add(hLines);
+                }
+            } catch (e) { console.warn('Failed to add left foot horizontal edges', e); }
             lFoot.add(lFootMesh);
             interactables.push(lFootMesh);
             lFoot.position.set(0, -1.1, 0);
@@ -2324,6 +2674,60 @@
             rFootMesh.castShadow = true;
             rFootMesh.receiveShadow = true;
             rFootMesh.userData.joint = rFoot;
+            // Add vertical-only outline to right foot (skip horizontal edges)
+            try {
+                const positions = rFootGeo.attributes.position.array;
+                const index = rFootGeo.index ? rFootGeo.index.array : null;
+                const linePositions = [];
+                if (index) {
+                    for (let i = 0; i < index.length; i += 2) {
+                        const i1 = index[i] * 3;
+                        const i2 = index[i+1] * 3;
+                        const x1 = positions[i1], y1 = positions[i1+1], z1 = positions[i1+2];
+                        const x2 = positions[i2], y2 = positions[i2+1], z2 = positions[i2+2];
+                        const xDiff = Math.abs(x2 - x1);
+                        const zDiff = Math.abs(z2 - z1);
+                        const yDiff = Math.abs(y2 - y1);
+                        if (xDiff < 0.02 && zDiff < 0.02 && yDiff > 0.03) {
+                            linePositions.push(x1, y1, z1, x2, y2, z2);
+                        }
+                    }
+                }
+                if (linePositions.length > 0) {
+                    const vGeo = new THREE.BufferGeometry();
+                    vGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(linePositions), 3));
+                    const vMat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                    const vLines = new THREE.LineSegments(vGeo, vMat);
+                    rFootMesh.add(vLines);
+                }
+            } catch (e) { console.warn('Failed foot vertical edges', e); }
+            // Add horizontal outlines for right foot (top/bottom edges)
+            try {
+                const positionsH = rFootGeo.attributes.position.array;
+                const indexH = rFootGeo.index ? rFootGeo.index.array : null;
+                const horizPositions = [];
+                if (indexH) {
+                    for (let i = 0; i < indexH.length; i += 2) {
+                        const i1 = indexH[i] * 3;
+                        const i2 = indexH[i + 1] * 3;
+                        const x1 = positionsH[i1], y1 = positionsH[i1 + 1], z1 = positionsH[i1 + 2];
+                        const x2 = positionsH[i2], y2 = positionsH[i2 + 1], z2 = positionsH[i2 + 2];
+                        const xDiff = Math.abs(x2 - x1);
+                        const zDiff = Math.abs(z2 - z1);
+                        const yDiff = Math.abs(y2 - y1);
+                        if (yDiff < 0.02 && ((xDiff > 0.02 && zDiff < 0.02) || (zDiff > 0.02 && xDiff < 0.02))) {
+                            horizPositions.push(x1, y1, z1, x2, y2, z2);
+                        }
+                    }
+                }
+                if (horizPositions.length > 0) {
+                    const hGeo = new THREE.BufferGeometry();
+                    hGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(horizPositions), 3));
+                    const hMat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                    const hLines = new THREE.LineSegments(hGeo, hMat);
+                    rFootMesh.add(hLines);
+                }
+            } catch (e) { console.warn('Failed to add right foot horizontal edges', e); }
             rFoot.add(rFootMesh);
             interactables.push(rFootMesh);
             rFoot.position.set(0, -1.1, 0);
@@ -2459,6 +2863,8 @@
                 mcap.smoothing = parseFloat(ui.mcapSmoothing.value) || 0;
                 ui.mcapSmoothingValue.textContent = mcap.smoothing.toFixed(2);
             });
+            // Make the MCAP panel draggable by the user
+            mcapMakePanelDraggable();
             mcapWarmup();
         }
 
@@ -2511,6 +2917,80 @@
                 });
             }
             return mcap.poseLandmarker;
+        }
+
+        // Draggable panel implementation
+        const _mcapDragState = { active: false, pointerId: null, startX: 0, startY: 0, panelStartLeft: 0, panelStartTop: 0 };
+
+        function mcapMakePanelDraggable() {
+            const panel = ui.mcapPanel;
+            if (!panel) return;
+            panel.style.position = panel.style.position || 'fixed';
+            panel.style.touchAction = 'none';
+            panel.addEventListener('pointerdown', mcapPanelPointerDown);
+        }
+
+        function mcapPanelPointerDown(e) {
+            if (e.button !== 0) return;
+            const panel = ui.mcapPanel;
+            if (!panel) return;
+
+            // Don't start dragging when interacting with controls
+            if (e.target.closest('button, input, select, textarea, a')) return;
+
+            panel.setPointerCapture(e.pointerId);
+            _mcapDragState.active = true;
+            _mcapDragState.pointerId = e.pointerId;
+            _mcapDragState.startX = e.clientX;
+            _mcapDragState.startY = e.clientY;
+            const rect = panel.getBoundingClientRect();
+            _mcapDragState.panelStartLeft = rect.left;
+            _mcapDragState.panelStartTop = rect.top;
+
+            // Switch from bottom/right anchored inline style to explicit left/top positioning
+            panel.style.right = 'auto';
+            panel.style.bottom = 'auto';
+            panel.style.left = `${rect.left}px`;
+            panel.style.top = `${rect.top}px`;
+            panel.classList.add('dragging');
+
+            window.addEventListener('pointermove', mcapPanelPointerMove);
+            window.addEventListener('pointerup', mcapPanelPointerUp);
+        }
+
+        function mcapPanelPointerMove(e) {
+            if (!_mcapDragState.active || e.pointerId !== _mcapDragState.pointerId) return;
+            const panel = ui.mcapPanel;
+            if (!panel) return;
+
+            const dx = e.clientX - _mcapDragState.startX;
+            const dy = e.clientY - _mcapDragState.startY;
+            let newLeft = _mcapDragState.panelStartLeft + dx;
+            let newTop = _mcapDragState.panelStartTop + dy;
+
+            // Clamp to viewport
+            const winW = window.innerWidth;
+            const winH = window.innerHeight;
+            const panelW = panel.offsetWidth;
+            const panelH = panel.offsetHeight;
+            newLeft = Math.min(Math.max(0, newLeft), Math.max(0, winW - panelW));
+            newTop = Math.min(Math.max(0, newTop), Math.max(0, winH - panelH));
+
+            panel.style.left = `${Math.round(newLeft)}px`;
+            panel.style.top = `${Math.round(newTop)}px`;
+        }
+
+        function mcapPanelPointerUp(e) {
+            if (!_mcapDragState.active || e.pointerId !== _mcapDragState.pointerId) return;
+            const panel = ui.mcapPanel;
+            if (panel) {
+                try { panel.releasePointerCapture(e.pointerId); } catch (err) {}
+                panel.classList.remove('dragging');
+            }
+            _mcapDragState.active = false;
+            _mcapDragState.pointerId = null;
+            window.removeEventListener('pointermove', mcapPanelPointerMove);
+            window.removeEventListener('pointerup', mcapPanelPointerUp);
         }
 
         async function mcapHandleFileSelected(event) {
@@ -2625,6 +3105,7 @@
                 const q = mcapQuatFromBasis(bodyLeft, torsoUp);
                 mcapSetWorldQuat(pose, wqMap, 'Hips_0', q);
                 mcapSetWorldQuat(pose, wqMap, 'Spine_0', q);
+                mcapSetWorldQuat(pose, wqMap, 'Neck_0', q);
             }
 
             const headLeft = mcapAvgDir([

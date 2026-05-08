@@ -175,6 +175,11 @@
                     Clear Anim
                 </button>
 
+                <button id="export-sprite-sheet-btn" class="bg-purple-700/80 hover:bg-purple-600/90 text-white py-1.5 px-3 rounded-lg transition-colors text-sm border border-purple-600/50 flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Sprite Sheet
+                </button>
+
                 <div class="h-6 w-px bg-white/20 mx-1 hidden md:block"></div>
 
                 <label class="flex items-center gap-2 text-sm text-gray-300">
@@ -252,6 +257,80 @@
         </div>
     </div>
 
+    <!-- Exporting Indicator -->
+    <div id="exporting-indicator" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-black/80 backdrop-blur-md px-4 py-2 rounded-lg border border-yellow-400/30 text-yellow-300 text-sm font-semibold shadow-xl">
+        ● RENDERING SPRITES...
+    </div>
+
+    <!-- Export Sprite Sheet Modal -->
+    <div id="export-modal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/75 backdrop-blur-sm">
+        <div class="bg-[#1e1e2e] border border-white/15 rounded-xl shadow-2xl p-5 w-80 max-h-[90vh] overflow-y-auto text-white text-sm space-y-3">
+            <h3 class="text-base font-bold text-white mb-1">Export Options</h3>
+
+            <div class="flex items-center justify-between gap-2">
+                <label class="text-gray-300">Resolution</label>
+                <div class="flex items-center gap-1.5">
+                    <input id="exp-width" type="number" value="128" class="w-16 bg-white/10 border border-white/15 rounded px-2 py-1 text-white text-xs outline-none focus:border-purple-400">
+                    <span class="text-gray-500 text-xs">×</span>
+                    <input id="exp-height" type="number" value="128" class="w-16 bg-white/10 border border-white/15 rounded px-2 py-1 text-white text-xs outline-none focus:border-purple-400">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-2">
+                <label class="text-gray-300">Layout</label>
+                <select id="exp-layout" class="bg-[#2a2a3e] border border-white/15 text-white text-xs rounded px-2 py-1 outline-none focus:border-purple-400">
+                    <option value="grid">Grid (Standard)</option>
+                    <option value="horizontal">Horizontal Strip</option>
+                    <option value="vertical">Vertical Strip</option>
+                </select>
+            </div>
+
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input id="exp-transparent" type="checkbox" class="accent-purple-400">
+                <span class="text-gray-300">Transparent Background</span>
+            </label>
+
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input id="exp-normalize-head" type="checkbox" class="accent-purple-400">
+                <span class="text-gray-300">Normalize Head Color</span>
+            </label>
+
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input id="exp-normalize-bg" type="checkbox" class="accent-purple-400">
+                <span class="text-gray-300">Normalize Background</span>
+            </label>
+
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input id="exp-bounding-box" type="checkbox" class="accent-purple-400">
+                <span class="text-gray-300">Center Crop (from center)</span>
+            </label>
+
+            <div id="exp-bounding-box-settings" class="hidden space-y-2 pl-2 border-l border-white/10">
+                <div class="flex items-center justify-between gap-2">
+                    <label class="text-gray-400 text-xs">Crop Width</label>
+                    <input id="exp-bb-width" type="number" value="100" class="w-20 bg-white/10 border border-white/15 rounded px-2 py-1 text-white text-xs outline-none focus:border-purple-400">
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                    <label class="text-gray-400 text-xs">Crop Height</label>
+                    <input id="exp-bb-height" type="number" value="300" class="w-20 bg-white/10 border border-white/15 rounded px-2 py-1 text-white text-xs outline-none focus:border-purple-400">
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                    <label class="text-gray-400 text-xs">Offset X</label>
+                    <input id="exp-bb-offset-x" type="number" value="0" class="w-20 bg-white/10 border border-white/15 rounded px-2 py-1 text-white text-xs outline-none focus:border-purple-400">
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                    <label class="text-gray-400 text-xs">Offset Y</label>
+                    <input id="exp-bb-offset-y" type="number" value="-30" class="w-20 bg-white/10 border border-white/15 rounded px-2 py-1 text-white text-xs outline-none focus:border-purple-400">
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-1">
+                <button id="export-modal-cancel" class="flex-1 bg-white/10 hover:bg-white/15 text-white py-1.5 rounded-lg transition-colors border border-white/10">Cancel</button>
+                <button id="export-modal-export" class="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-semibold py-1.5 rounded-lg transition-colors">Export</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -315,6 +394,26 @@
         let activeAnimationEffects = null;
         let summonVfx = null;
         const effectAnchorPosition = new THREE.Vector3();
+
+        // --- Sprite Sheet Export State ---
+        let isExporting = false;
+        const exportSettings = {
+            width: 128,
+            height: 128,
+            layout: 'grid',
+            transparentBackground: false,
+            normalizeHeadColor: false,
+            normalizeBackground: false,
+            useBoundingBox: false,
+            boundingBoxWidth: 100,
+            boundingBoxHeight: 300,
+            boundingBoxOffsetX: 0,
+            boundingBoxOffsetY: -30
+        };
+        const REF_HEAD_COLORS_EXPORT = [
+            0x800000, 0xff8800, 0x333333, 0x00ff00, 0x00ffff, 0x0000ff, 0xff00ff, 0x8800ff, 0x111111
+        ];
+        const exportCanvas = document.createElement('canvas');
 
         // --- Motion Capture Constants & State ---
         const MCAP_WASM_ROOT = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21-rc.20250105/wasm';
@@ -384,7 +483,7 @@
             camera.position.set( 0, 5, 12 );
 
             // Renderer setup
-            renderer = new THREE.WebGLRenderer( { antialias: true } );
+            renderer = new THREE.WebGLRenderer( { antialias: true, alpha: true } );
             renderer.setPixelRatio( window.devicePixelRatio );
             renderer.setSize( window.innerWidth, window.innerHeight );
             renderer.shadowMap.enabled = true;
@@ -539,6 +638,14 @@
 
             loadLibrariesFromStorage();
 
+            // Sprite sheet export
+            ui.exportSpriteSheetBtn.addEventListener('click', openExportModal);
+            ui.exportModalCancel.addEventListener('click', closeExportModal);
+            ui.exportModalExport.addEventListener('click', doExport);
+            ui.expBoundingBoxCheck.addEventListener('change', () => {
+                ui.expBoundingBoxSettings.classList.toggle('hidden', !ui.expBoundingBoxCheck.checked);
+            });
+
             // Add first character
             createCharacter();
             refreshTimelineUi();
@@ -599,6 +706,14 @@
             ui.mcapStatusText = document.getElementById('mcap-status-text');
             ui.mcapBadge = document.getElementById('mcap-badge');
             ui.mcapTracked = document.getElementById('mcap-tracked');
+            // Sprite sheet export UI
+            ui.exportSpriteSheetBtn = document.getElementById('export-sprite-sheet-btn');
+            ui.exportingIndicator = document.getElementById('exporting-indicator');
+            ui.exportModal = document.getElementById('export-modal');
+            ui.exportModalCancel = document.getElementById('export-modal-cancel');
+            ui.exportModalExport = document.getElementById('export-modal-export');
+            ui.expBoundingBoxCheck = document.getElementById('exp-bounding-box');
+            ui.expBoundingBoxSettings = document.getElementById('exp-bounding-box-settings');
         }
 
         // --- Logic & Systems ---
@@ -2355,33 +2470,7 @@
             neckMesh.castShadow = true;
             neckMesh.receiveShadow = true;
             neckMesh.userData.joint = neck;
-            // Add vertical-only outline to neck (skip horizontal edges)
-            try {
-                const positions = neckGeo.attributes.position.array;
-                const index = neckGeo.index ? neckGeo.index.array : null;
-                const linePositions = [];
-                if (index) {
-                    for (let i = 0; i < index.length; i += 2) {
-                        const i1 = index[i] * 3;
-                        const i2 = index[i+1] * 3;
-                        const x1 = positions[i1], y1 = positions[i1+1], z1 = positions[i1+2];
-                        const x2 = positions[i2], y2 = positions[i2+1], z2 = positions[i2+2];
-                        const xDiff = Math.abs(x2 - x1);
-                        const zDiff = Math.abs(z2 - z1);
-                        const yDiff = Math.abs(y2 - y1);
-                        if (xDiff < 0.02 && zDiff < 0.02 && yDiff > 0.03) {
-                            linePositions.push(x1, y1, z1, x2, y2, z2);
-                        }
-                    }
-                }
-                if (linePositions.length > 0) {
-                    const vGeo = new THREE.BufferGeometry();
-                    vGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(linePositions), 3));
-                    const vMat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
-                    const vLines = new THREE.LineSegments(vGeo, vMat);
-                    neckMesh.add(vLines);
-                }
-            } catch (e) { console.warn('Failed to add neck vertical edges', e); }
+            // Skipping neck vertical outline to avoid black lines on the neck
             neck.add(neckMesh);
             interactables.push(neckMesh);
             neck.position.set(0, 1.10, 0); // Attached to top of torso/cylinder
@@ -3403,10 +3492,287 @@
             ui.mcapStatusText.textContent = message;
         }
 
+        // ===========================================================
+        // SPRITE SHEET EXPORT
+        // ===========================================================
+
+        function openExportModal() {
+            document.getElementById('exp-width').value = exportSettings.width;
+            document.getElementById('exp-height').value = exportSettings.height;
+            document.getElementById('exp-layout').value = exportSettings.layout;
+            document.getElementById('exp-transparent').checked = exportSettings.transparentBackground;
+            document.getElementById('exp-normalize-head').checked = exportSettings.normalizeHeadColor;
+            document.getElementById('exp-normalize-bg').checked = exportSettings.normalizeBackground;
+            document.getElementById('exp-bounding-box').checked = exportSettings.useBoundingBox;
+            document.getElementById('exp-bb-width').value = exportSettings.boundingBoxWidth;
+            document.getElementById('exp-bb-height').value = exportSettings.boundingBoxHeight;
+            document.getElementById('exp-bb-offset-x').value = exportSettings.boundingBoxOffsetX;
+            document.getElementById('exp-bb-offset-y').value = exportSettings.boundingBoxOffsetY;
+            ui.expBoundingBoxSettings.classList.toggle('hidden', !exportSettings.useBoundingBox);
+            ui.exportModal.classList.remove('hidden');
+        }
+
+        function closeExportModal() {
+            ui.exportModal.classList.add('hidden');
+        }
+
+        function doExport() {
+            exportSettings.width = parseInt(document.getElementById('exp-width').value) || 128;
+            exportSettings.height = parseInt(document.getElementById('exp-height').value) || 128;
+            exportSettings.layout = document.getElementById('exp-layout').value;
+            exportSettings.transparentBackground = document.getElementById('exp-transparent').checked;
+            exportSettings.normalizeHeadColor = document.getElementById('exp-normalize-head').checked;
+            exportSettings.normalizeBackground = document.getElementById('exp-normalize-bg').checked;
+            exportSettings.useBoundingBox = document.getElementById('exp-bounding-box').checked;
+            exportSettings.boundingBoxWidth = parseInt(document.getElementById('exp-bb-width').value) || 100;
+            exportSettings.boundingBoxHeight = parseInt(document.getElementById('exp-bb-height').value) || 300;
+            exportSettings.boundingBoxOffsetX = parseInt(document.getElementById('exp-bb-offset-x').value) || 0;
+            exportSettings.boundingBoxOffsetY = parseInt(document.getElementById('exp-bb-offset-y').value) || -30;
+            closeExportModal();
+            generateSpriteSheet();
+        }
+
+        async function generateSpriteSheet() {
+            if (keyframes.length === 0) { alert('No keyframes!'); return; }
+            isExporting = true;
+            ui.exportingIndicator.classList.remove('hidden');
+            ui.exportSpriteSheetBtn.disabled = true;
+
+            orbitControls.enabled = false;
+
+            const grid = scene.children.find(c => c instanceof THREE.GridHelper);
+            const floor = scene.children.find(c => c.isMesh && c.geometry && c.geometry.type === 'PlaneGeometry');
+            if (grid) grid.visible = false;
+            if (floor) floor.visible = false;
+
+            const originalFog = scene.fog;
+            scene.fog = null;
+
+            const originalBackground = scene.background;
+            if (exportSettings.transparentBackground) {
+                scene.background = null;
+                renderer.setClearAlpha(0);
+            }
+
+            const originalCameraPos = camera.position.clone();
+            const originalAspect = camera.aspect;
+
+            // Hide summon VFX
+            if (summonVfx) summonVfx.group.visible = false;
+
+            // Store original materials and convert all meshes to MeshBasicMaterial
+            const originalMaterialsMap = new Map();
+
+            function convertMeshToBasic(mesh) {
+                originalMaterialsMap.set(mesh, mesh.material);
+                if (Array.isArray(mesh.material)) {
+                    mesh.material = mesh.material.map(m => new THREE.MeshBasicMaterial({ color: m.color.clone() }));
+                } else {
+                    mesh.material = new THREE.MeshBasicMaterial({ color: mesh.material.color.clone() });
+                }
+                mesh.children.forEach(child => {
+                    if (child.isMesh) convertMeshToBasic(child);
+                });
+            }
+
+            characters.forEach(charRoot => {
+                charRoot.traverse(obj => {
+                    if (obj.isMesh) convertMeshToBasic(obj);
+                });
+            });
+
+            // Hide all line/edge children (vertical outlines on head and limbs)
+            const hiddenLines = [];
+            scene.traverse(obj => {
+                if ((obj.isLine || obj.isLineSegments) && obj.visible) {
+                    obj.visible = false;
+                    hiddenLines.push(obj);
+                }
+            });
+
+            // Resize renderer to export resolution
+            const origPixelRatio = renderer.getPixelRatio();
+            renderer.setPixelRatio(1);
+            renderer.setSize(exportSettings.width, exportSettings.height, false);
+            camera.aspect = exportSettings.width / exportSettings.height;
+            camera.updateProjectionMatrix();
+
+            const directions = 8;
+            const frames = keyframes.length;
+
+            const cellWidth = exportSettings.useBoundingBox ? exportSettings.boundingBoxWidth : exportSettings.width;
+            const cellHeight = exportSettings.useBoundingBox ? exportSettings.boundingBoxHeight : exportSettings.height;
+
+            let sheetWidth, sheetHeight;
+            if (exportSettings.layout === 'horizontal') {
+                sheetWidth = cellWidth * (frames * directions);
+                sheetHeight = cellHeight;
+            } else if (exportSettings.layout === 'vertical') {
+                sheetWidth = cellWidth;
+                sheetHeight = cellHeight * (frames * directions);
+            } else {
+                sheetWidth = cellWidth * frames;
+                sheetHeight = cellHeight * directions;
+            }
+
+            exportCanvas.width = sheetWidth;
+            exportCanvas.height = sheetHeight;
+            const ctx = exportCanvas.getContext('2d', { alpha: true });
+            if (ctx) ctx.imageSmoothingEnabled = false;
+
+            // Find head mesh (first character, first Head_ group child mesh)
+            let headMesh = null;
+            if (characters.length > 0) {
+                characters[0].traverse(obj => {
+                    if (!headMesh && obj.isMesh && obj.parent && obj.parent.name && obj.parent.name.startsWith('Head_')) {
+                        headMesh = obj;
+                    }
+                });
+            }
+
+            const radius = 9;
+            const height = 2.6;
+
+            for (let d = 0; d < directions; d++) {
+                const angle = (d / directions) * Math.PI * 2 - Math.PI * 0.25;
+                camera.position.x = Math.sin(angle) * radius;
+                camera.position.z = Math.cos(angle) * radius;
+                camera.position.y = height;
+                camera.lookAt(0, 2.6, 0);
+                camera.updateMatrixWorld();
+
+                for (let f = 0; f < frames; f++) {
+                    applyPoseState(keyframes[f].pose);
+
+                    // Normalize Head Color Logic (matches +page.svelte exactly)
+                    if (exportSettings.normalizeHeadColor && headMesh) {
+                        const headWorldPos = new THREE.Vector3();
+                        headMesh.getWorldPosition(headWorldPos);
+
+                        const viewVec = new THREE.Vector3().subVectors(camera.position, headWorldPos).normalize();
+                        const headQuat = new THREE.Quaternion();
+                        headMesh.getWorldQuaternion(headQuat);
+                        const invQuat = headQuat.clone().invert();
+                        viewVec.applyQuaternion(invQuat);
+
+                        let theta = Math.atan2(viewVec.x, viewVec.z);
+                        const sectorAngle = Math.PI / 4;
+                        let index = Math.round(theta / sectorAngle) - 1;
+                        if (index < 0) index += 8;
+                        index = index % 8;
+
+                        headMesh.material = new THREE.MeshBasicMaterial({ color: REF_HEAD_COLORS_EXPORT[index] });
+                    }
+
+                    renderer.render(scene, camera);
+
+                    let dx = 0, dy = 0;
+                    if (exportSettings.layout === 'horizontal') {
+                        dx = (d * frames + f) * cellWidth;
+                    } else if (exportSettings.layout === 'vertical') {
+                        dy = (d * frames + f) * cellHeight;
+                    } else {
+                        dx = f * cellWidth;
+                        dy = d * cellHeight;
+                    }
+
+                    if (ctx) {
+                        // Normalize background pixel
+                        if (exportSettings.normalizeBackground && headMesh) {
+                            const headWorldPos = new THREE.Vector3();
+                            headMesh.getWorldPosition(headWorldPos);
+                            const viewVec = new THREE.Vector3().subVectors(camera.position, headWorldPos).normalize();
+                            const headQuat = new THREE.Quaternion();
+                            headMesh.getWorldQuaternion(headQuat);
+                            const invQuat = headQuat.clone().invert();
+                            viewVec.applyQuaternion(invQuat);
+                            let theta = Math.atan2(viewVec.x, viewVec.z);
+                            const sectorAngle = Math.PI / 4;
+                            let index = Math.round(theta / sectorAngle) - 1;
+                            if (index < 0) index += 8;
+                            index = index % 8;
+                            ctx.save();
+                            ctx.globalAlpha = 1.0;
+                            ctx.fillStyle = `#${REF_HEAD_COLORS_EXPORT[index].toString(16).padStart(6, '0')}`;
+                            const cornerWidth = Math.ceil(cellWidth * 0.01);
+                            const cornerHeight = Math.ceil(cellHeight * 0.01);
+                            ctx.clearRect(dx, dy, cornerWidth, cornerHeight);
+                            ctx.fillRect(dx, dy, cornerWidth, cornerHeight);
+                            ctx.globalAlpha = 1.0;
+                            ctx.restore();
+                        }
+
+                        if (exportSettings.useBoundingBox) {
+                            const sourceWidth = exportSettings.width;
+                            const sourceHeight = exportSettings.height;
+                            const cropWidth = exportSettings.boundingBoxWidth;
+                            const cropHeight = exportSettings.boundingBoxHeight;
+                            const cropX = (sourceWidth - cropWidth) / 2 + exportSettings.boundingBoxOffsetX;
+                            const cropY = (sourceHeight - cropHeight) / 2 + exportSettings.boundingBoxOffsetY;
+                            const srcX = Math.max(0, cropX);
+                            const srcY = Math.max(0, cropY);
+                            const srcW = Math.min(cropWidth, sourceWidth - srcX);
+                            const srcH = Math.min(cropHeight, sourceHeight - srcY);
+                            ctx.drawImage(renderer.domElement, srcX, srcY, srcW, srcH, dx, dy, srcW, srcH);
+                        } else {
+                            ctx.drawImage(renderer.domElement, dx, dy);
+                        }
+                    }
+
+                    await new Promise(r => setTimeout(r, 20));
+                }
+            }
+
+            const link = document.createElement('a');
+            link.download = `sprite_${Date.now()}.png`;
+            link.href = exportCanvas.toDataURL('image/png');
+            link.click();
+
+            // Restore materials
+            originalMaterialsMap.forEach((mat, mesh) => {
+                if (Array.isArray(mesh.material)) mesh.material.forEach(m => m.dispose());
+                else mesh.material.dispose();
+                mesh.material = mat;
+            });
+
+            // Restore hidden lines
+            hiddenLines.forEach(obj => { obj.visible = true; });
+
+            // Restore scene state
+            scene.background = originalBackground;
+            scene.fog = originalFog;
+            if (grid) grid.visible = true;
+            if (floor) floor.visible = true;
+
+            renderer.setPixelRatio(origPixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight, false);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            camera.position.copy(originalCameraPos);
+            camera.lookAt(0, 2.5, 0);
+
+            if (exportSettings.transparentBackground) {
+                renderer.setClearAlpha(1);
+            }
+
+            // Restore summon VFX
+            if (activeAnimationEffects) applyAnimationEffectsState(currentTime);
+
+            // Restore current pose
+            applyPoseAtTime(currentTime);
+
+            orbitControls.enabled = true;
+            isExporting = false;
+            ui.exportingIndicator.classList.add('hidden');
+            ui.exportSpriteSheetBtn.disabled = false;
+        }
+
         function animate() {
             requestAnimationFrame( animate );
             
             const delta = clock.getDelta();
+            if (isExporting) return;
+
             updateAnimation(delta);
             updateAnimationEffects(delta);
             

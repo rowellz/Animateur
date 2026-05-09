@@ -85,6 +85,11 @@
                         Add Character
                     </button>
                     
+                    <button id="mcap-upload-btn" class="w-full bg-cyan-700/70 hover:bg-cyan-600 text-white text-xs font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1.5">
+                        <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.069A1 1 0 0121 8.882v6.236a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        Capture Motion
+                    </button>
+                    
                     <div class="flex gap-1.5">
                         <button id="mode-rotate" class="flex-1 bg-white/20 hover:bg-white/30 text-white font-medium py-1 px-2 rounded-lg transition-colors border border-white/20 text-xs">Rotate (R)</button>
                         <button id="mode-translate" class="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 font-medium py-1 px-2 rounded-lg transition-colors border border-white/10 text-xs">Move (T)</button>
@@ -132,38 +137,6 @@
                 <span class="text-sm text-gray-300">Selected: </span>
                 <span id="selected-name" class="font-bold text-blue-400">None</span>
             </div>
-
-            <!-- Animations Pane (Upper Right) -->
-            <div class="bg-black/60 backdrop-blur-md p-2 rounded-xl border border-white/10 shadow-xl interactive-ui w-56 max-h-[calc(100vh-2rem)] overflow-y-auto">
-                <div class="rounded-xl border border-white/10 bg-white/[0.03] p-2 space-y-1.5">
-                    <div class="flex items-center justify-between gap-2">
-                        <h2 class="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">Animations</h2>
-                        <span class="text-[10px] text-gray-500">Save anim</span>
-                    </div>
-                    <input id="animation-name-input" type="text" placeholder="Animation name" class="w-full bg-white/10 border border-white/10 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-blue-400 placeholder:text-gray-500">
-                    <select id="animation-library" size="3" class="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-blue-400"></select>
-                    <div class="grid grid-cols-2 gap-1.5">
-                        <button id="save-animation-btn" class="bg-violet-600 hover:bg-violet-500 text-white text-xs font-medium py-1 px-2 rounded-lg transition-colors">Save</button>
-                        <button id="load-animation-btn" class="bg-white/10 hover:bg-white/15 text-white text-xs font-medium py-1 px-2 rounded-lg border border-white/10 transition-colors">Load</button>
-                        <button id="export-animation-btn" class="bg-white/10 hover:bg-white/15 text-white text-xs font-medium py-1 px-2 rounded-lg border border-white/10 transition-colors">Export</button>
-                        <button id="import-animation-btn" class="bg-white/10 hover:bg-white/15 text-white text-xs font-medium py-1 px-2 rounded-lg border border-white/10 transition-colors">Import</button>
-                    </div>
-                    <button id="delete-animation-btn" class="w-full bg-red-900/40 hover:bg-red-800/55 text-red-200 text-xs font-medium py-1 px-2 rounded-lg border border-red-900/40 transition-colors">Delete</button>
-                    <button id="mcap-upload-btn" class="w-full bg-cyan-700/70 hover:bg-cyan-600 text-white text-xs font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1.5">
-                        <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.069A1 1 0 0121 8.882v6.236a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                        Capture Motion
-                    </button>
-                    <!-- <a href="./ripper.html" target="_blank" rel="noopener noreferrer" class="block w-full bg-emerald-600/85 hover:bg-emerald-500 text-center text-white text-xs font-medium py-1 px-2 rounded-lg transition-colors">
-                        Ripper
-                    </a>
-                    <a href="./AutoRigScene.html" target="_blank" rel="noopener noreferrer" class="block w-full bg-amber-500/85 hover:bg-amber-400 text-center text-slate-950 text-xs font-semibold py-1 px-2 rounded-lg transition-colors">
-                        Open Auto Rig Scene
-                    </a>
-                    <a href="./Playground.html" target="_blank" rel="noopener noreferrer" class="block w-full bg-cyan-600/85 hover:bg-cyan-500 text-center text-white text-xs font-medium py-1 px-2 rounded-lg transition-colors">
-                        Playground
-                    </a> -->
-                </div>
-            </div>
         </div>
 
         <!-- Animation Timeline / Controls -->
@@ -187,6 +160,16 @@
                 <button id="export-sprite-sheet-btn" class="bg-purple-700/80 hover:bg-purple-600/90 text-white py-1.5 px-3 rounded-lg transition-colors text-sm border border-purple-600/50 flex items-center gap-1.5">
                     <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                     Sprite Sheet
+                </button>
+
+                <button id="export-animation-btn" class="bg-orange-700/80 hover:bg-orange-600/90 text-white py-1.5 px-3 rounded-lg transition-colors text-sm border border-orange-600/50 flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Export Anim
+                </button>
+
+                <button id="import-animation-btn" class="bg-teal-700/80 hover:bg-teal-600/90 text-white py-1.5 px-3 rounded-lg transition-colors text-sm border border-teal-600/50 flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8v1a3 3 0 003 3h10a3 3 0 003-3V8m-4 4l4-4m0 0l4 4m-4-4v12"></path></svg>
+                    Import Anim
                 </button>
 
                 <div class="h-6 w-px bg-white/20 mx-1 hidden md:block"></div>
@@ -238,7 +221,7 @@
     <input id="mcap-file-input" type="file" accept="video/*" class="hidden">
 
     <!-- Motion Capture Panel (lower right, shown after video upload) -->
-    <div id="mcap-panel" class="hidden fixed z-50" style="bottom:1rem;right:1rem;width:296px;">
+    <div id="mcap-panel" class="hidden fixed z-50" style="top:1rem;right:1rem;width:296px;">
         <div class="bg-black/85 backdrop-blur-md rounded-xl border border-white/10 shadow-2xl overflow-hidden">
             <div id="mcap-video-wrapper">
                 <video id="mcap-video" controls muted playsinline class="w-full block" style="max-height:220px;object-fit:contain;background:#000;display:block;"></video>
@@ -363,7 +346,7 @@
             'Left_Lower_Leg': '#00CED1',
             'Right_Upper_Leg': '#FF8C00',
             'Right_Lower_Leg': '#FFA500',
-            'Left_Foot': '#AFEEE',
+            'Left_Foot': '#AFEEEE',
             'Right_Foot': '#FFDAB9'
         };
         let selectedMesh = null;
@@ -626,17 +609,17 @@
             });
             ui.timelineTrack.addEventListener('pointerdown', handleTimelinePointerDown);
             ui.poseLibrary.addEventListener('change', () => syncSelectedAssetName('pose'));
-            ui.animationLibrary.addEventListener('change', () => syncSelectedAssetName('animation'));
+            if (ui.animationLibrary) ui.animationLibrary.addEventListener('change', () => syncSelectedAssetName('animation'));
             ui.savePoseBtn.addEventListener('click', saveCurrentPoseToLibrary);
             ui.applyPoseBtn.addEventListener('click', applySelectedPoseFromLibrary);
             ui.exportPoseBtn.addEventListener('click', exportSelectedPose);
             ui.importPoseBtn.addEventListener('click', () => ui.poseImportInput.click());
             ui.deletePoseBtn.addEventListener('click', () => deleteSelectedAsset('pose'));
-            ui.saveAnimationBtn.addEventListener('click', saveCurrentAnimationToLibrary);
-            ui.loadAnimationBtn.addEventListener('click', loadSelectedAnimationFromLibrary);
-            ui.exportAnimationBtn.addEventListener('click', exportSelectedAnimation);
-            ui.importAnimationBtn.addEventListener('click', () => ui.animationImportInput.click());
-            ui.deleteAnimationBtn.addEventListener('click', () => deleteSelectedAsset('animation'));
+            if (ui.saveAnimationBtn) ui.saveAnimationBtn.addEventListener('click', saveCurrentAnimationToLibrary);
+            if (ui.loadAnimationBtn) ui.loadAnimationBtn.addEventListener('click', loadSelectedAnimationFromLibrary);
+            if (ui.exportAnimationBtn) ui.exportAnimationBtn.addEventListener('click', exportCurrentAnimation);
+            if (ui.importAnimationBtn) ui.importAnimationBtn.addEventListener('click', () => ui.animationImportInput.click());
+            if (ui.deleteAnimationBtn) ui.deleteAnimationBtn.addEventListener('click', () => deleteSelectedAsset('animation'));
             ui.poseImportInput.addEventListener('change', (event) => handleAssetImport(event, 'pose'));
             ui.animationImportInput.addEventListener('change', (event) => handleAssetImport(event, 'animation'));
             window.addEventListener('pointermove', handleGlobalPointerMove);
@@ -710,13 +693,13 @@
             ui.importPoseBtn = document.getElementById('import-pose-btn');
             ui.deletePoseBtn = document.getElementById('delete-pose-btn');
             ui.bodyColorsContainer = document.getElementById('body-colors-container');
-            ui.animationNameInput = document.getElementById('animation-name-input');
-            ui.animationLibrary = document.getElementById('animation-library');
-            ui.saveAnimationBtn = document.getElementById('save-animation-btn');
-            ui.loadAnimationBtn = document.getElementById('load-animation-btn');
-            ui.exportAnimationBtn = document.getElementById('export-animation-btn');
-            ui.importAnimationBtn = document.getElementById('import-animation-btn');
-            ui.deleteAnimationBtn = document.getElementById('delete-animation-btn');
+            ui.animationNameInput = document.getElementById('animation-name-input') || null;
+            ui.animationLibrary = document.getElementById('animation-library') || null;
+            ui.saveAnimationBtn = document.getElementById('save-animation-btn') || null;
+            ui.loadAnimationBtn = document.getElementById('load-animation-btn') || null;
+            ui.exportAnimationBtn = document.getElementById('export-animation-btn') || null;
+            ui.importAnimationBtn = document.getElementById('import-animation-btn') || null;
+            ui.deleteAnimationBtn = document.getElementById('delete-animation-btn') || null;
             ui.assetStatus = document.getElementById('asset-status');
             ui.poseImportInput = document.getElementById('pose-import-input');
             ui.animationImportInput = document.getElementById('animation-import-input');
@@ -786,6 +769,7 @@
         function refreshAssetLibraryUi(type) {
             const select = type === 'pose' ? ui.poseLibrary : ui.animationLibrary;
             const input = type === 'pose' ? ui.poseNameInput : ui.animationNameInput;
+            if (!select || !input) return; // Skip if animation UI elements don't exist
             const label = type === 'pose' ? 'saved poses' : 'saved animations';
             const previousValue = select.value || input.value.trim();
 
@@ -825,6 +809,7 @@
         function syncSelectedAssetName(type) {
             const select = type === 'pose' ? ui.poseLibrary : ui.animationLibrary;
             const input = type === 'pose' ? ui.poseNameInput : ui.animationNameInput;
+            if (!select || !input) return; // Skip if animation UI elements don't exist
             if (select.selectedOptions.length === 0 || select.selectedOptions[0].disabled) return;
             input.value = select.value;
         }
@@ -837,6 +822,18 @@
 
         function getAssetNameInput(type) {
             const input = type === 'pose' ? ui.poseNameInput : ui.animationNameInput;
+            if (!input) {
+                // Generate a default name if input doesn't exist
+                const base = type === 'pose' ? 'Pose' : 'Animation';
+                const existing = new Set(libraries[type].map(asset => asset.name.toLowerCase()));
+                let index = 1;
+                let generated = `${base} ${index}`;
+                while (existing.has(generated.toLowerCase())) {
+                    index += 1;
+                    generated = `${base} ${index}`;
+                }
+                return generated;
+            }
             const explicitName = input.value.trim();
 
             if (explicitName) {
@@ -956,6 +953,18 @@
             setStatus(`Animation "${asset.name}" exported as JSON.`, 'success');
         }
 
+        function exportCurrentAnimation() {
+            if (keyframes.length === 0) {
+                setStatus('Record at least one keyframe before exporting.', 'error');
+                return;
+            }
+
+            const animationName = getAssetNameInput('animation');
+            const asset = createAnimationAsset(animationName);
+            downloadAssetFile(asset);
+            setStatus(`Animation "${animationName}" exported as JSON.`, 'success');
+        }
+
         async function handleAssetImport(event, type) {
             const input = event.target;
             const file = input.files?.[0];
@@ -964,17 +973,27 @@
 
             try {
                 const text = await file.text();
-                const asset = normalizeImportedAsset(JSON.parse(text), type, file.name);
-                saveAssetToLibrary(type, asset);
+                const parsed = JSON.parse(text);
+                console.log(`Attempting to import file:`, parsed);
+                
+                // Auto-detect the actual file type instead of relying on the button clicked
+                const actualType = parsed?.type === 'animation' || Array.isArray(parsed?.keyframes)
+                    ? 'animation'
+                    : 'pose';
+                
+                console.log(`Detected file type: ${actualType}`);
+                const asset = normalizeImportedAsset(parsed, actualType, file.name);
+                console.log(`Normalized ${actualType} asset:`, asset);
+                saveAssetToLibrary(actualType, asset);
 
-                if (type === 'pose') {
+                if (actualType === 'pose') {
                     applyPoseAsset(asset);
                 } else {
                     loadAnimationAsset(asset);
                 }
             } catch (error) {
                 console.error(error);
-                setStatus(error instanceof Error ? error.message : `Unable to import ${type}.`, 'error');
+                setStatus(error instanceof Error ? error.message : `Unable to import file.`, 'error');
             } finally {
                 input.value = '';
             }
@@ -1033,6 +1052,11 @@
         }
 
         function loadAnimationAsset(asset) {
+            if (!asset || !Array.isArray(asset.keyframes)) {
+                setStatus('Invalid animation asset format.', 'error');
+                return;
+            }
+
             const importedFrames = deserializeKeyframes(asset.keyframes);
             if (importedFrames.length === 0) {
                 setStatus(`Animation "${asset.name}" has no valid keyframes to load.`, 'error');
@@ -1089,17 +1113,21 @@
                 if (positionValues.length !== 3 || quaternionValues.length !== 4) return;
                 if (![...positionValues, ...quaternionValues].every(Number.isFinite)) return;
 
-                const quaternion = new THREE.Quaternion(...quaternionValues);
-                if (quaternion.lengthSq() === 0) {
-                    quaternion.identity();
-                } else {
-                    quaternion.normalize();
-                }
+                try {
+                    const quaternion = new THREE.Quaternion(...quaternionValues);
+                    if (quaternion.lengthSq() === 0) {
+                        quaternion.identity();
+                    } else {
+                        quaternion.normalize();
+                    }
 
-                pose[name] = {
-                    position: new THREE.Vector3(...positionValues),
-                    quaternion
-                };
+                    pose[name] = {
+                        position: new THREE.Vector3(...positionValues),
+                        quaternion
+                    };
+                } catch (error) {
+                    console.warn(`Failed to deserialize joint ${name}:`, error);
+                }
             });
 
             return pose;
@@ -1112,7 +1140,12 @@
                 const time = roundTime(Number.parseFloat(frame?.time));
                 const pose = deserializePose(frame?.pose);
 
-                if (!Number.isFinite(time) || time < 0 || Object.keys(pose).length === 0) return;
+                if (!Number.isFinite(time) || time < 0 || Object.keys(pose).length === 0) {
+                    if (!Number.isFinite(time) || time < 0) {
+                        console.warn(`Invalid keyframe time: ${frame?.time}`);
+                    }
+                    return;
+                }
                 uniqueFrames.set(time.toFixed(1), { time, pose });
             });
 
@@ -1676,12 +1709,8 @@
                 return;
             }
 
-            if (colors.length > 0) {
-                characters.forEach((character, index) => {
-                    if (!colors[index]) return;
-                    setCharacterColor(character, colors[index]);
-                });
-            }
+            // Only apply colors if we're creating new characters due to count mismatch
+            // Don't change colors when loading animations into existing characters
         }
 
         function getCharacterColors() {
@@ -1738,15 +1767,22 @@
         function applyPoseState(pose) {
             if (!pose) return;
 
-            characters.forEach(charRoot => {
-                charRoot.traverse(obj => {
-                    if (!obj.isGroup || !obj.name || !pose[obj.name]) return;
-                    obj.position.copy(pose[obj.name].position);
-                    obj.quaternion.copy(pose[obj.name].quaternion);
+            try {
+                characters.forEach(charRoot => {
+                    charRoot.traverse(obj => {
+                        if (!obj.isGroup || !obj.name || !pose[obj.name]) return;
+                        if (!pose[obj.name].position || !pose[obj.name].quaternion) return;
+                        obj.position.copy(pose[obj.name].position);
+                        obj.quaternion.copy(pose[obj.name].quaternion);
+                    });
+                    // Update spine centerline after pose changes
+                    updateSpineCenterline(charRoot);
                 });
-            });
 
-            syncTransformAttachment();
+                syncTransformAttachment();
+            } catch (error) {
+                console.error('Error applying pose state:', error, 'pose:', pose);
+            }
         }
 
         function getCurrentTransformMode() {
@@ -1968,21 +2004,28 @@
             const jointNames = new Set([ ...Object.keys(poseA || {}), ...Object.keys(poseB || {}) ]);
 
             jointNames.forEach(name => {
-                if (poseA?.[name] && poseB?.[name]) {
-                    blended[name] = {
-                        position: poseA[name].position.clone().lerp(poseB[name].position, alpha),
-                        quaternion: poseA[name].quaternion.clone().slerp(poseB[name].quaternion, alpha)
-                    };
-                } else if (poseA?.[name]) {
-                    blended[name] = {
-                        position: poseA[name].position.clone(),
-                        quaternion: poseA[name].quaternion.clone()
-                    };
-                } else if (poseB?.[name]) {
-                    blended[name] = {
-                        position: poseB[name].position.clone(),
-                        quaternion: poseB[name].quaternion.clone()
-                    };
+                try {
+                    const poseAValid = poseA?.[name]?.position && poseA?.[name]?.quaternion;
+                    const poseBValid = poseB?.[name]?.position && poseB?.[name]?.quaternion;
+
+                    if (poseAValid && poseBValid) {
+                        blended[name] = {
+                            position: poseA[name].position.clone().lerp(poseB[name].position, alpha),
+                            quaternion: poseA[name].quaternion.clone().slerp(poseB[name].quaternion, alpha)
+                        };
+                    } else if (poseAValid) {
+                        blended[name] = {
+                            position: poseA[name].position.clone(),
+                            quaternion: poseA[name].quaternion.clone()
+                        };
+                    } else if (poseBValid) {
+                        blended[name] = {
+                            position: poseB[name].position.clone(),
+                            quaternion: poseB[name].quaternion.clone()
+                        };
+                    }
+                } catch (error) {
+                    console.warn(`Error interpolating joint ${name}:`, error);
                 }
             });
 
@@ -2287,6 +2330,106 @@
             ui.selectedName.innerText = cleanName;
         }
 
+        function createSpineCenterlineTexture() {
+            // Create a canvas texture with a vertical centerline on transparent background
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 512;
+            
+            const ctx = canvas.getContext('2d');
+            // Don't fill with black - keep transparent
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw vertical centerline only
+            ctx.strokeStyle = '#FF1493';
+            ctx.lineWidth = 8;
+            ctx.globalAlpha = 0.9;
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+            
+            // Add subtle glow
+            ctx.strokeStyle = '#FF69B4';
+            ctx.lineWidth = 4;
+            ctx.globalAlpha = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2 - 6, 0);
+            ctx.lineTo(canvas.width / 2 - 6, canvas.height);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2 + 6, 0);
+            ctx.lineTo(canvas.width / 2 + 6, canvas.height);
+            ctx.stroke();
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.magFilter = THREE.LinearFilter;
+            texture.minFilter = THREE.LinearFilter;
+            return texture;
+        }
+
+        function createSpineCenterline(charRoot, charId) {
+            if (!charRoot) return;
+            
+            const spine = charRoot.getObjectByName(`Spine_${charId}`);
+            if (!spine || !spine.children[0]) return;
+            
+            const spineMesh = spine.children[0];
+            spineMesh.geometry.computeBoundingBox();
+            const bbox = spineMesh.geometry.boundingBox;
+            const height = bbox.max.y - bbox.min.y;
+            const width = bbox.max.x - bbox.min.x;
+            
+            // Create plane that sits on torso front surface - extends full height to align bottom with torso bottom
+            const planeGeometry = new THREE.PlaneGeometry(width * 0.8, height * 1.05, 1, 1);
+            const texture = createSpineCenterlineTexture();
+            const planeMaterial = new THREE.MeshBasicMaterial({
+                map: texture,
+                transparent: true,
+                depthTest: true,
+                depthWrite: false,
+                side: THREE.FrontSide
+            });
+            
+            const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+            plane.name = `SpineCenterline_${charId}`;
+            plane.position.z = (bbox.max.z - bbox.min.z) * 0.5 + 0.02; // Slight offset in front
+            // Center the plane on the torso bbox to align bottom with torso bottom
+            plane.position.y = (bbox.min.y + bbox.max.y) * 0.5;
+            plane.userData.isSpineCenterline = true;
+            
+            // Add to spine mesh
+            spineMesh.add(plane);
+        }
+
+        function updateSpineCenterline(charRoot) {
+            if (!charRoot) return;
+            
+            // Find charId from the root name
+            const idMatch = charRoot.name.match(/_(\d+)$/);
+            const charId = idMatch ? parseInt(idMatch[1]) : null;
+            
+            if (charId === null) return;
+            
+            const spine = charRoot.getObjectByName(`Spine_${charId}`);
+            if (!spine || !spine.children[0]) return;
+            
+            const spineMesh = spine.children[0];
+            
+            // Find and remove existing centerline
+            const existingCenterline = spineMesh.children.find(child => child.userData.isSpineCenterline);
+            if (existingCenterline) {
+                spineMesh.remove(existingCenterline);
+                existingCenterline.geometry?.dispose?.();
+                existingCenterline.material?.map?.dispose?.();
+                existingCenterline.material?.dispose?.();
+            }
+            
+            // Recreate with updated positions
+            createSpineCenterline(charRoot, charId);
+        }
+
         function deselect() {
             if(selectedMesh) {
                 selectedMesh.material.emissive.setHex(0x000000);
@@ -2308,9 +2451,21 @@
                     if (!obj.isMesh) return;
                     obj.geometry?.dispose?.();
                     if (Array.isArray(obj.material)) {
-                        obj.material.forEach(material => material?.dispose?.());
+                        obj.material.forEach(material => {
+                            material?.map?.dispose?.();
+                            material?.dispose?.();
+                        });
                     } else {
+                        obj.material?.map?.dispose?.();
                         obj.material?.dispose?.();
+                    }
+                    // Dispose centerline if it's on this mesh
+                    const centerline = obj.children?.find(child => child.userData.isSpineCenterline);
+                    if (centerline) {
+                        centerline.geometry?.dispose?.();
+                        centerline.material?.map?.dispose?.();
+                        centerline.material?.dispose?.();
+                        obj.remove(centerline);
                     }
                 });
                 scene.remove(character);
@@ -2341,13 +2496,29 @@
         }
 
         function setCharacterColor(character, colorValue) {
-            const color = new THREE.Color(colorValue);
-            character.userData.characterColor = `#${color.getHexString()}`;
+            try {
+                const color = new THREE.Color(colorValue);
+                character.userData.characterColor = `#${color.getHexString()}`;
 
-            character.traverse(obj => {
-                if (!obj.isMesh) return;
-                obj.material.color.copy(color);
-            });
+                character.traverse(obj => {
+                    if (!obj.isMesh) return;
+                    if (!obj.material) return;
+                    
+                    // Handle array of materials
+                    if (Array.isArray(obj.material)) {
+                        obj.material.forEach(mat => {
+                            if (mat && mat.color) {
+                                mat.color.copy(color);
+                            }
+                        });
+                    } else if (obj.material.color) {
+                        // Handle single material
+                        obj.material.color.copy(color);
+                    }
+                });
+            } catch (error) {
+                console.warn(`Failed to set character color: ${colorValue}`, error);
+            }
         }
 
         function buildBodyColorUI() {
@@ -2383,15 +2554,43 @@
         }
 
         function applyBodySegmentColor(segment) {
-            const color = new THREE.Color(bodySegmentColors[segment]);
-            
-            characters.forEach(character => {
-                character.traverse(obj => {
-                    if (!obj.isMesh) return;
-                    
-                    // Check if mesh has explicit segment name in userData
-                    if (obj.userData.segmentName === segment) {
-                        // Clone materials before changing colors
+            try {
+                const color = new THREE.Color(bodySegmentColors[segment]);
+                
+                characters.forEach(character => {
+                    character.traverse(obj => {
+                        if (!obj.isMesh) return;
+                        
+                        // Check if mesh has explicit segment name in userData
+                        if (obj.userData.segmentName === segment) {
+                            // Clone materials before changing colors
+                            if (Array.isArray(obj.material)) {
+                                obj.material = obj.material.map(mat => {
+                                    const newMat = mat.clone();
+                                    if (newMat.color) {
+                                        newMat.color.copy(color);
+                                    }
+                                    return newMat;
+                                });
+                            } else if (obj.material && obj.material.color) {
+                                const newMat = obj.material.clone();
+                                newMat.color.copy(color);
+                                obj.material = newMat;
+                            }
+                            return;
+                        }
+                        
+                        // Check if this mesh belongs to the target segment via parent/userData.joint
+                        let jointName = null;
+                        if (obj.userData.joint && obj.userData.joint.name) {
+                            jointName = obj.userData.joint.name;
+                        } else if (obj.parent && obj.parent.name) {
+                            jointName = obj.parent.name;
+                        }
+                        
+                        if (!jointName || !jointName.startsWith(segment + '_')) return;
+                        
+                        // Clone materials before changing colors to avoid affecting shared materials
                         if (Array.isArray(obj.material)) {
                             obj.material = obj.material.map(mat => {
                                 const newMat = mat.clone();
@@ -2405,49 +2604,53 @@
                             newMat.color.copy(color);
                             obj.material = newMat;
                         }
-                        return;
-                    }
-                    
-                    // Check if this mesh belongs to the target segment via parent/userData.joint
-                    let jointName = null;
-                    if (obj.userData.joint && obj.userData.joint.name) {
-                        jointName = obj.userData.joint.name;
-                    } else if (obj.parent && obj.parent.name) {
-                        jointName = obj.parent.name;
-                    }
-                    
-                    if (!jointName || !jointName.startsWith(segment + '_')) return;
-                    
-                    // Clone materials before changing colors to avoid affecting shared materials
-                    if (Array.isArray(obj.material)) {
-                        obj.material = obj.material.map(mat => {
-                            const newMat = mat.clone();
-                            if (newMat.color) {
-                                newMat.color.copy(color);
-                            }
-                            return newMat;
-                        });
-                    } else if (obj.material && obj.material.color) {
-                        const newMat = obj.material.clone();
-                        newMat.color.copy(color);
-                        obj.material = newMat;
-                    }
+                    });
                 });
-            });
+            } catch (error) {
+                console.warn(`Failed to apply color for segment ${segment}: ${bodySegmentColors[segment]}`, error);
+            }
         }
 
         function applyBodySegmentColorsToCharacter(character) {
             const segmentNames = Object.keys(bodySegmentColors);
             
             segmentNames.forEach(segment => {
-                const color = new THREE.Color(bodySegmentColors[segment]);
-                
-                character.traverse(obj => {
-                    if (!obj.isMesh) return;
+                try {
+                    const color = new THREE.Color(bodySegmentColors[segment]);
                     
-                    // Check if mesh has explicit segment name in userData
-                    if (obj.userData.segmentName === segment) {
-                        // Clone materials before changing colors
+                    character.traverse(obj => {
+                        if (!obj.isMesh) return;
+                        
+                        // Check if mesh has explicit segment name in userData
+                        if (obj.userData.segmentName === segment) {
+                            // Clone materials before changing colors
+                            if (Array.isArray(obj.material)) {
+                                obj.material = obj.material.map(mat => {
+                                    const newMat = mat.clone();
+                                    if (newMat.color) {
+                                        newMat.color.copy(color);
+                                    }
+                                    return newMat;
+                                });
+                            } else if (obj.material && obj.material.color) {
+                                const newMat = obj.material.clone();
+                                newMat.color.copy(color);
+                                obj.material = newMat;
+                            }
+                            return;
+                        }
+                        
+                        // Check if this mesh belongs to the target segment via parent/userData.joint
+                        let jointName = null;
+                        if (obj.userData.joint && obj.userData.joint.name) {
+                            jointName = obj.userData.joint.name;
+                        } else if (obj.parent && obj.parent.name) {
+                            jointName = obj.parent.name;
+                        }
+                        
+                        if (!jointName || !jointName.startsWith(segment + '_')) return;
+                        
+                        // Clone materials before changing colors to avoid affecting shared materials
                         if (Array.isArray(obj.material)) {
                             obj.material = obj.material.map(mat => {
                                 const newMat = mat.clone();
@@ -2461,34 +2664,10 @@
                             newMat.color.copy(color);
                             obj.material = newMat;
                         }
-                        return;
-                    }
-                    
-                    // Check if this mesh belongs to the target segment via parent/userData.joint
-                    let jointName = null;
-                    if (obj.userData.joint && obj.userData.joint.name) {
-                        jointName = obj.userData.joint.name;
-                    } else if (obj.parent && obj.parent.name) {
-                        jointName = obj.parent.name;
-                    }
-                    
-                    if (!jointName || !jointName.startsWith(segment + '_')) return;
-                    
-                    // Clone materials before changing colors to avoid affecting shared materials
-                    if (Array.isArray(obj.material)) {
-                        obj.material = obj.material.map(mat => {
-                            const newMat = mat.clone();
-                            if (newMat.color) {
-                                newMat.color.copy(color);
-                            }
-                            return newMat;
-                        });
-                    } else if (obj.material && obj.material.color) {
-                        const newMat = obj.material.clone();
-                        newMat.color.copy(color);
-                        obj.material = newMat;
-                    }
-                });
+                    });
+                } catch (error) {
+                    console.warn(`Failed to apply color for segment ${segment}: ${bodySegmentColors[segment]}`, error);
+                }
             });
         }
 
@@ -2570,10 +2749,12 @@
             const root = new THREE.Group();
             root.name = 'Hips_' + charId;
 
-            // Box part (slightly smaller than the torso width/depth)
-            // Increased height so the box extends down to the top of the legs
-            const boxGeo = new THREE.BoxGeometry(0.95, 0.9, 0.55);
-            boxGeo.translate(0, 0.25, 0);
+            // Hip depth scale to match shortened torso depth
+            const HIP_DEPTH_SCALE = 0.82; // 1.0 = original, <1 reduces front-back depth
+
+            // Box part (compact hips aligned with bottom of torso)
+            const boxGeo = new THREE.BoxGeometry(0.95, 0.35, 0.55 * HIP_DEPTH_SCALE);
+            boxGeo.translate(0, 0.05, 0);
             const boxMat = material.clone();
             const boxMesh = new THREE.Mesh(boxGeo, boxMat);
             boxMesh.castShadow = true;
@@ -2588,7 +2769,7 @@
             // Make capsule slightly smaller and lower it further under the box
             const hipGeo = new THREE.CapsuleGeometry(0.26, 0.08, 4, 8);
             hipGeo.rotateX(Math.PI / 2);
-            hipGeo.scale(1, 1, 0.75);
+            hipGeo.scale(1, 1, 0.75 * HIP_DEPTH_SCALE);
             // Lower the capsule so it sits further below the box and blends with the legs
             hipGeo.translate(0, -0.12, 0);
             const hipMat = material.clone();
@@ -2604,7 +2785,11 @@
             
             // 2. Torso (Spine)
             // Make torso match hips width/depth for consistent silhouette
-            const torso = createLimb(1.0, 0.85, 0.6, 0.42, material, "Spine", charId);
+            // Slightly shorten the spine for a more compact silhouette
+            const SPINE_SCALE = 0.92; // 1.0 = original, <1 shortens
+            const SPINE_DEPTH_SCALE = 0.82; // reduce torso depth (front-back)
+            const torsoHeight = 0.85 * SPINE_SCALE;
+            const torso = createLimb(1.0, torsoHeight, 0.6 * SPINE_DEPTH_SCALE, 0.42 * SPINE_SCALE, material, "Spine", charId);
             torso.position.set(0, 0.2, 0); // Attached slightly above hip center
             root.add(torso);
             
@@ -2665,11 +2850,12 @@
             // Make the neck a cylinder so it sits nicely on top of the rounded shoulders
             const neck = new THREE.Group();
             neck.name = 'Neck_' + charId;
-            // match previous neck height used for head placement (0.24)
-            const neckRadius = 0.12;
-            const neckGeo = new THREE.CylinderGeometry(neckRadius, neckRadius, 0.24, 8);
+            // Shorter and slightly thicker neck for better proportions
+            const NECK_HEIGHT = 0.18; // shorter than original 0.24
+            const NECK_RADIUS = 0.16; // thicker than original 0.12
+            const neckGeo = new THREE.CylinderGeometry(NECK_RADIUS, NECK_RADIUS, NECK_HEIGHT, 8);
             // translate so the group's origin acts as the joint pivot at the base
-            neckGeo.translate(0, 0.12, 0);
+            neckGeo.translate(0, NECK_HEIGHT * 0.5, 0);
             const neckMat = material.clone();
             const neckMesh = new THREE.Mesh(neckGeo, neckMat);
             neckMesh.castShadow = true;
@@ -2678,12 +2864,30 @@
             // Skipping neck vertical outline to avoid black lines on the neck
             neck.add(neckMesh);
             interactables.push(neckMesh);
-            neck.position.set(0, 1.10, 0); // Attached to top of torso/cylinder
+            
+            // Add yellow triangle under the neck (like in +page.svelte)
+            const yellowTriangleGeo = new THREE.BufferGeometry();
+            const triangleVertices = new Float32Array([
+                -0.12, -0.2, 0,   // bottom left
+                0.12, -0.2, 0,    // bottom right
+                0, 0.03, 0        // top
+            ]);
+            yellowTriangleGeo.setAttribute('position', new THREE.BufferAttribute(triangleVertices, 3));
+            yellowTriangleGeo.computeVertexNormals();
+            const yellowTriangleMat = new THREE.MeshStandardMaterial({ color: 0xFFFF00, roughness: 0.6, metalness: 0.1 });
+            const yellowTriangleMesh = new THREE.Mesh(yellowTriangleGeo, yellowTriangleMat);
+            yellowTriangleMesh.position.set(0, -0.18, 0.25);  // Lower and further from neck, closer to camera
+            yellowTriangleMesh.rotation.z = -Math.PI;
+            yellowTriangleMesh.rotation.x = -0.4;
+            neckMesh.add(yellowTriangleMesh);
+            
+            // Attach neck slightly lower when the spine is shortened
+            neck.position.set(0, 1.10 * SPINE_SCALE, 0); // Attached to top of torso/cylinder
             torso.add(neck);
             // Create an 8-sided head (matching +page.svelte) with per-side colors
             const head = new THREE.Group();
             head.name = 'Head_' + charId;
-            const neckHeight = 0.24;
+            const neckHeight = NECK_HEIGHT;
             const headRadius = 0.30;
             const headHeight = 0.48; // make the head shorter
             const headGeo = new THREE.CylinderGeometry(headRadius, headRadius, headHeight, 8, 1, false);
@@ -2747,14 +2951,23 @@
 
             // 4. Arms
             const armW = 0.25;
-            
+            // Adjust arm scale (1.0 = original length, <1 shortens)
+            const ARM_SCALE = 0.75; // shortened more
+            const BASE_ARM_SEG = 0.9;
+            const upperArmH = BASE_ARM_SEG * ARM_SCALE;
+            const lowerArmH = BASE_ARM_SEG * ARM_SCALE;
+            // raise attachment a bit so arms sit slightly higher under the torso
+            const ARM_BASE_OFFSET = 0.06;
+            const ARM_ATTACH_RAISE = 0.18; // additional lift (raised further)
+            const upperArmAttachY = 0.95 * ARM_SCALE + ARM_BASE_OFFSET + ARM_ATTACH_RAISE;
+
             // Left Arm
-            const lUpperArm = createLimb(armW, 0.9, armW, -0.45, material, "Left_Upper_Arm", charId);
-            lUpperArm.position.set(0.6, 0.95, 0); // Right side of torso (viewer left)
+            const lUpperArm = createLimb(armW, upperArmH, armW, -0.45, material, "Left_Upper_Arm", charId);
+            lUpperArm.position.set(0.6, upperArmAttachY, 0); // attach under torso
             torso.add(lUpperArm);
-            
-            const lLowerArm = createLimb(armW*0.9, 0.9, armW*0.9, -0.45, material, "Left_Lower_Arm", charId);
-            lLowerArm.position.set(0, -0.9, 0); // End of upper arm
+
+            const lLowerArm = createLimb(armW*0.9, lowerArmH, armW*0.9, -0.45, material, "Left_Lower_Arm", charId);
+            lLowerArm.position.set(0, -upperArmH, 0); // attach at end of upper arm
             lUpperArm.add(lLowerArm);
 
             // Add top cylinder to left upper arm
@@ -2809,13 +3022,72 @@
             }
 
             // Right Arm
-            const rUpperArm = createLimb(armW, 0.9, armW, -0.45, material, "Right_Upper_Arm", charId);
-            rUpperArm.position.set(-0.6, 0.95, 0); // Left side of torso
+            const rUpperArm = createLimb(armW, upperArmH, armW, -0.45, material, "Right_Upper_Arm", charId);
+            rUpperArm.position.set(-0.6, upperArmAttachY, 0);
             torso.add(rUpperArm);
-            
-            const rLowerArm = createLimb(armW*0.9, 0.9, armW*0.9, -0.45, material, "Right_Lower_Arm", charId);
-            rLowerArm.position.set(0, -0.9, 0);
+
+            const rLowerArm = createLimb(armW*0.9, lowerArmH, armW*0.9, -0.45, material, "Right_Lower_Arm", charId);
+            rLowerArm.position.set(0, -upperArmH, 0);
             rUpperArm.add(rLowerArm);
+
+            // Hands — attach hand meshes to the end of each lower arm
+            // Compute lower-arm cross-section and make hands slightly smaller
+            const lowerArmCross = armW * 0.9; // lower arm width/depth used when creating lower arm
+            const handScale = 0.9; // fraction of lower-arm cross to use for hands
+            const handWidth = lowerArmCross * handScale;
+            const handDepth = lowerArmCross * handScale;
+            const handHeight = 0.14; // thickness of the hand along Y
+
+            // Left Hand
+            const lHand = new THREE.Group();
+            lHand.name = 'Left_Hand_' + charId;
+            const lHandGeo = new THREE.BoxGeometry(handWidth, handHeight, handDepth);
+            // Translate so the geometry's top aligns with the group's origin (wrist pivot)
+            lHandGeo.translate(0, -handHeight * 0.5, 0);
+            const lHandMat = new THREE.MeshStandardMaterial({ color: 0xFFA07A, roughness: 0.6, metalness: 0.1 });
+            const lHandMesh = new THREE.Mesh(lHandGeo, lHandMat);
+            lHandMesh.castShadow = true;
+            lHandMesh.receiveShadow = true;
+            lHandMesh.userData.joint = lHand;
+            lHandMesh.userData.segmentName = 'Left_Hand';
+            lHand.add(lHandMesh);
+            // Add black outline like +page.svelte
+            try {
+                const edges = new THREE.EdgesGeometry(lHandGeo);
+                const edgeMat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                const edgeLines = new THREE.LineSegments(edges, edgeMat);
+                lHandMesh.add(edgeLines);
+            } catch (e) { console.warn('Failed to add hand outline', e); }
+            interactables.push(lHandMesh);
+            // Position the hand group at the wrist (end of lower arm) and lower slightly
+            // Lower the hand further so it sits past the wrist (tweakable extra offset)
+            const handLowerExtra = 0.06; // small downward tweak
+            lHand.position.set(0, -lowerArmH - Math.max(handHeight * 0.5, handWidth * 0.25) - handLowerExtra, 0);
+            lLowerArm.add(lHand);
+
+            // Right Hand
+            const rHand = new THREE.Group();
+            rHand.name = 'Right_Hand_' + charId;
+            const rHandGeo = new THREE.BoxGeometry(handWidth, handHeight, handDepth);
+            rHandGeo.translate(0, -handHeight * 0.5, 0);
+            const rHandMat = new THREE.MeshStandardMaterial({ color: 0x98FB98, roughness: 0.6, metalness: 0.1 });
+            const rHandMesh = new THREE.Mesh(rHandGeo, rHandMat);
+            rHandMesh.castShadow = true;
+            rHandMesh.receiveShadow = true;
+            rHandMesh.userData.joint = rHand;
+            rHandMesh.userData.segmentName = 'Right_Hand';
+            rHand.add(rHandMesh);
+            try {
+                const edgesR = new THREE.EdgesGeometry(rHandGeo);
+                const edgeMatR = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                const edgeLinesR = new THREE.LineSegments(edgesR, edgeMatR);
+                rHandMesh.add(edgeLinesR);
+            } catch (e) { console.warn('Failed to add hand outline', e); }
+            interactables.push(rHandMesh);
+            // Position the right hand and lower slightly to sit past the wrist
+            const handLowerExtraR = 0.06; // small downward tweak for right hand
+            rHand.position.set(0, -lowerArmH - Math.max(handHeight * 0.5, handWidth * 0.25) - handLowerExtraR, 0);
+            rLowerArm.add(rHand);
 
             // Add top cylinder to right upper arm
             const rUpperArmMesh = rUpperArm.children[0];
@@ -2868,25 +3140,38 @@
                 } catch (e) { console.warn('Failed to add right arm cylinder outlines', e); }
             }
 
-            // 5. Legs
+            // 5. Legs (shortened with automatic torso/hip lowering)
             const legW = 0.35;
+            // Adjust this scale to shorten/lengthen legs (1.0 = original, 0.8 = 20% shorter)
+            const LEG_SCALE = 0.8;
+            const BASE_LEG_SEG = 1.1; // original per-segment height
+            const upperLegH = BASE_LEG_SEG * LEG_SCALE;
+            const lowerLegH = BASE_LEG_SEG * LEG_SCALE;
+
+            // Lower the root (hips) so feet remain on the ground after shortening legs
+            const originalTotalLeg = BASE_LEG_SEG * 2;
+            const newTotalLeg = upperLegH + lowerLegH;
+            const legDelta = originalTotalLeg - newTotalLeg;
+            // original root Y was 2.6; lower by the delta so the torso sits correctly
+            root.position.set(x, 2.6 - legDelta, z);
 
             // Left Leg
-            const lUpperLeg = createLimb(legW, 1.1, legW, -0.55, material, "Left_Upper_Leg", charId);
-            lUpperLeg.position.set(0.25, -0.2, 0); // Bottom of hips
+            const upperLegAttachY = -0.12 * LEG_SCALE; // raise/lower to snugly meet hips
+            const lUpperLeg = createLimb(legW, upperLegH, legW, -0.55, material, "Left_Upper_Leg", charId);
+            lUpperLeg.position.set(0.25, upperLegAttachY, 0); // attach under hips
             root.add(lUpperLeg);
             
-            const lLowerLeg = createLimb(legW*0.9, 1.1, legW*0.9, -0.55, material, "Left_Lower_Leg", charId);
-            lLowerLeg.position.set(0, -1.1, 0);
+            const lLowerLeg = createLimb(legW*0.9, lowerLegH, legW*0.9, -0.55, material, "Left_Lower_Leg", charId);
+            lLowerLeg.position.set(0, -upperLegH, 0);
             lUpperLeg.add(lLowerLeg);
 
             // Right Leg
-            const rUpperLeg = createLimb(legW, 1.1, legW, -0.55, material, "Right_Upper_Leg", charId);
-            rUpperLeg.position.set(-0.25, -0.2, 0);
+            const rUpperLeg = createLimb(legW, upperLegH, legW, -0.55, material, "Right_Upper_Leg", charId);
+            rUpperLeg.position.set(-0.25, upperLegAttachY, 0);
             root.add(rUpperLeg);
             
-            const rLowerLeg = createLimb(legW*0.9, 1.1, legW*0.9, -0.55, material, "Right_Lower_Leg", charId);
-            rLowerLeg.position.set(0, -1.1, 0);
+            const rLowerLeg = createLimb(legW*0.9, lowerLegH, legW*0.9, -0.55, material, "Right_Lower_Leg", charId);
+            rLowerLeg.position.set(0, -upperLegH, 0);
             rUpperLeg.add(rLowerLeg);
 
             // 6. Feet
@@ -2960,7 +3245,7 @@
             } catch (e) { console.warn('Failed to add left foot horizontal edges', e); }
             lFoot.add(lFootMesh);
             interactables.push(lFootMesh);
-            lFoot.position.set(0, -1.1, 0);
+            lFoot.position.set(0, -lowerLegH, 0);
             lLowerLeg.add(lFoot);
 
             const rFoot = new THREE.Group();
@@ -3028,7 +3313,7 @@
             } catch (e) { console.warn('Failed to add right foot horizontal edges', e); }
             rFoot.add(rFootMesh);
             interactables.push(rFootMesh);
-            rFoot.position.set(0, -1.1, 0);
+            rFoot.position.set(0, -lowerLegH, 0);
             rLowerLeg.add(rFoot);
 
             // Default minor pose variation so it doesn't look completely rigid
@@ -3043,6 +3328,9 @@
             
             // Apply per-segment colors
             applyBodySegmentColorsToCharacter(root);
+            
+            // Create spine centerline
+            createSpineCenterline(root, charId);
             
             scene.add(root);
             characters.push(root);
@@ -3061,7 +3349,12 @@
             ensureTimelineCovers(currentTime);
 
             if (options.applyPose !== false) {
-                applyPoseAtTime(currentTime);
+                try {
+                    applyPoseAtTime(currentTime);
+                } catch (error) {
+                    console.error('Error applying pose at time:', error);
+                    setStatus(`Error applying animation pose: ${error.message}`, 'error');
+                }
             } else {
                 applyAnimationEffectsState(currentTime);
             }
@@ -3998,15 +4291,3 @@
 </body>
 </html>
 
-
-<!-- WMS wareshouse management solution -->
-
-<!-- RPA's robotic process automation -->
-
-<!-- ERP Enterprise resource  -->
-
-<!-- What is the appetite for AI solutions?  -->
-
-<!-- Has anything been built with AI yet?  -->
-
-<!-- What are some of your goals and what can i do to help reach those  -->

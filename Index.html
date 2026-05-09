@@ -2565,7 +2565,41 @@
             // ------------------------------------
             
             // 1. Root (Hips)
-            const root = createLimb(1.0, 0.4, 0.6, 0, material, "Hips", charId);
+            // Make hips slightly narrower and shallower than the torso
+            // Create hips using a Box + Round (capsule) shape like +page.svelte
+            const root = new THREE.Group();
+            root.name = 'Hips_' + charId;
+
+            // Box part (slightly smaller than the torso width/depth)
+            // Increased height so the box extends down to the top of the legs
+            const boxGeo = new THREE.BoxGeometry(0.95, 0.9, 0.55);
+            boxGeo.translate(0, 0.25, 0);
+            const boxMat = material.clone();
+            const boxMesh = new THREE.Mesh(boxGeo, boxMat);
+            boxMesh.castShadow = true;
+            boxMesh.receiveShadow = true;
+            boxMesh.userData.joint = root;
+            boxMesh.userData.isLimb = true;
+            root.add(boxMesh);
+            interactables.push(boxMesh);
+
+            // Round/capsule part (blend with the box, increased size)
+            // Lowered slightly so it sits under the box portion
+            // Make capsule slightly smaller and lower it further under the box
+            const hipGeo = new THREE.CapsuleGeometry(0.26, 0.08, 4, 8);
+            hipGeo.rotateX(Math.PI / 2);
+            hipGeo.scale(1, 1, 0.75);
+            // Lower the capsule so it sits further below the box and blends with the legs
+            hipGeo.translate(0, -0.12, 0);
+            const hipMat = material.clone();
+            const hipMesh = new THREE.Mesh(hipGeo, hipMat);
+            hipMesh.castShadow = true;
+            hipMesh.receiveShadow = true;
+            hipMesh.userData.joint = root;
+            hipMesh.userData.isLimb = true;
+            root.add(hipMesh);
+            interactables.push(hipMesh);
+
             root.position.set(x, 2.6, z);
             
             // 2. Torso (Spine)
@@ -2716,7 +2750,7 @@
             
             // Left Arm
             const lUpperArm = createLimb(armW, 0.9, armW, -0.45, material, "Left_Upper_Arm", charId);
-            lUpperArm.position.set(0.6, 0.90, 0); // Right side of torso (viewer left)
+            lUpperArm.position.set(0.6, 0.95, 0); // Right side of torso (viewer left)
             torso.add(lUpperArm);
             
             const lLowerArm = createLimb(armW*0.9, 0.9, armW*0.9, -0.45, material, "Left_Lower_Arm", charId);
@@ -2776,7 +2810,7 @@
 
             // Right Arm
             const rUpperArm = createLimb(armW, 0.9, armW, -0.45, material, "Right_Upper_Arm", charId);
-            rUpperArm.position.set(-0.6, 0.90, 0); // Left side of torso
+            rUpperArm.position.set(-0.6, 0.95, 0); // Left side of torso
             torso.add(rUpperArm);
             
             const rLowerArm = createLimb(armW*0.9, 0.9, armW*0.9, -0.45, material, "Right_Lower_Arm", charId);
@@ -2863,7 +2897,8 @@
             const lFoot = new THREE.Group();
             lFoot.name = 'Left_Foot_' + charId;
             const lFootGeo = new THREE.BoxGeometry(footW, footH, footD);
-            lFootGeo.translate(0, -footH * 0.5, footD * 0.38); // pivot at ankle, extends forward
+            // Move foot geometry back slightly so feet sit further under the character
+            lFootGeo.translate(0, -footH * 0.5, footD * 0.20); // pivot at ankle, extends forward
             const lFootMesh = new THREE.Mesh(lFootGeo, material);
             lFootMesh.castShadow = true;
             lFootMesh.receiveShadow = true;
@@ -2931,7 +2966,8 @@
             const rFoot = new THREE.Group();
             rFoot.name = 'Right_Foot_' + charId;
             const rFootGeo = new THREE.BoxGeometry(footW, footH, footD);
-            rFootGeo.translate(0, -footH * 0.5, footD * 0.38);
+            // Move foot geometry back slightly so feet sit further under the character
+            rFootGeo.translate(0, -footH * 0.5, footD * 0.20);
             const rFootMesh = new THREE.Mesh(rFootGeo, material);
             rFootMesh.castShadow = true;
             rFootMesh.receiveShadow = true;
@@ -2996,10 +3032,12 @@
             rLowerLeg.add(rFoot);
 
             // Default minor pose variation so it doesn't look completely rigid
-            lUpperArm.rotation.z = 0.2;
-            rUpperArm.rotation.z = -0.2;
-            lUpperLeg.rotation.x = 0.05;
-            rUpperLeg.rotation.x = -0.05;
+            // Set initial arm rotations to zero for a straight/rest pose
+            lUpperArm.rotation.z = 0.0;
+            rUpperArm.rotation.z = 0.0;
+            // Straighten legs for initial pose
+            lUpperLeg.rotation.x = 0.0;
+            rUpperLeg.rotation.x = 0.0;
 
             root.userData.characterColor = `#${color.getHexString()}`;
             

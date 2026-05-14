@@ -2330,45 +2330,6 @@
             ui.selectedName.innerText = cleanName;
         }
 
-        function createSpineCenterlineTexture() {
-            // Create a canvas texture with a vertical centerline on transparent background
-            const canvas = document.createElement('canvas');
-            canvas.width = 128;
-            canvas.height = 512;
-            
-            const ctx = canvas.getContext('2d');
-            // Don't fill with black - keep transparent
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw vertical centerline only
-            ctx.strokeStyle = '#FF1493';
-            ctx.lineWidth = 8;
-            ctx.globalAlpha = 0.9;
-            ctx.beginPath();
-            ctx.moveTo(canvas.width / 2, 0);
-            ctx.lineTo(canvas.width / 2, canvas.height);
-            ctx.stroke();
-            
-            // Add subtle glow
-            ctx.strokeStyle = '#FF69B4';
-            ctx.lineWidth = 4;
-            ctx.globalAlpha = 0.5;
-            ctx.beginPath();
-            ctx.moveTo(canvas.width / 2 - 6, 0);
-            ctx.lineTo(canvas.width / 2 - 6, canvas.height);
-            ctx.stroke();
-            
-            ctx.beginPath();
-            ctx.moveTo(canvas.width / 2 + 6, 0);
-            ctx.lineTo(canvas.width / 2 + 6, canvas.height);
-            ctx.stroke();
-            
-            const texture = new THREE.CanvasTexture(canvas);
-            texture.magFilter = THREE.LinearFilter;
-            texture.minFilter = THREE.LinearFilter;
-            return texture;
-        }
-
         function createSpineCenterline(charRoot, charId) {
             if (!charRoot) return;
             
@@ -2380,27 +2341,68 @@
             const bbox = spineMesh.geometry.boundingBox;
             const height = bbox.max.y - bbox.min.y;
             const width = bbox.max.x - bbox.min.x;
+            const depth = bbox.max.z - bbox.min.z;
             
-            // Create plane that sits on torso front surface - extends full height to align bottom with torso bottom
-            const planeGeometry = new THREE.PlaneGeometry(width * 0.8, height * 1.05, 1, 1);
-            const texture = createSpineCenterlineTexture();
-            const planeMaterial = new THREE.MeshBasicMaterial({
-                map: texture,
-                transparent: true,
-                depthTest: true,
-                depthWrite: false,
-                side: THREE.FrontSide
-            });
+            // Create a group to hold the three lines
+            const linesGroup = new THREE.Group();
+            linesGroup.name = `SpineCenterline_${charId}`;
+            linesGroup.userData.isSpineCenterline = true;
             
-            const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-            plane.name = `SpineCenterline_${charId}`;
-            plane.position.z = (bbox.max.z - bbox.min.z) * 0.5 + 0.02; // Slight offset in front
-            // Center the plane on the torso bbox to align bottom with torso bottom
-            plane.position.y = (bbox.min.y + bbox.max.y) * 0.5;
-            plane.userData.isSpineCenterline = true;
+            const lineWidth = (width * 0.975) / 16; // Match the width of the brown cylinders
+            const lineHeight = height;
+            
+            // Center line (pink)
+            const centerGeo = new THREE.PlaneGeometry(lineWidth, lineHeight);
+            const centerMat = new THREE.MeshPhongMaterial({ color: 0xFF1493 });
+            const centerLine = new THREE.Mesh(centerGeo, centerMat);
+            centerLine.castShadow = true;
+            centerLine.receiveShadow = true;
+            centerLine.position.set(0, 0, (depth * 0.5) + 0.01);
+            linesGroup.add(centerLine);
+            
+            // Left line (brown)
+            const leftGeo = new THREE.PlaneGeometry(lineWidth, lineHeight);
+            const leftMat = new THREE.MeshPhongMaterial({ color: 0x8B6F47 });
+            const leftLine = new THREE.Mesh(leftGeo, leftMat);
+            leftLine.castShadow = true;
+            leftLine.receiveShadow = true;
+            leftLine.position.set(-width * (4/15), 0, (depth * 0.5) + 0.01);
+            linesGroup.add(leftLine);
+            
+            // Right line (brown)
+            const rightGeo = new THREE.PlaneGeometry(lineWidth, lineHeight);
+            const rightMat = new THREE.MeshPhongMaterial({ color: 0x8B6F47 });
+            const rightLine = new THREE.Mesh(rightGeo, rightMat);
+            rightLine.castShadow = true;
+            rightLine.receiveShadow = true;
+            rightLine.position.set(width * (4/15), 0, (depth * 0.5) + 0.01);
+            linesGroup.add(rightLine);
+            
+            // Back left line (brown)
+            const backLeftGeo = new THREE.PlaneGeometry(lineWidth, lineHeight);
+            const backLeftMat = new THREE.MeshPhongMaterial({ color: 0x8B6F47 });
+            const backLeftLine = new THREE.Mesh(backLeftGeo, backLeftMat);
+            backLeftLine.castShadow = true;
+            backLeftLine.receiveShadow = true;
+            backLeftLine.position.set(-width * (4/15), 0, -(depth * 0.5) - 0.01);
+            backLeftLine.rotation.y = Math.PI; // Face outward from back
+            linesGroup.add(backLeftLine);
+            
+            // Back right line (brown)
+            const backRightGeo = new THREE.PlaneGeometry(lineWidth, lineHeight);
+            const backRightMat = new THREE.MeshPhongMaterial({ color: 0x8B6F47 });
+            const backRightLine = new THREE.Mesh(backRightGeo, backRightMat);
+            backRightLine.castShadow = true;
+            backRightLine.receiveShadow = true;
+            backRightLine.position.set(width * (4/15), 0, -(depth * 0.5) - 0.01);
+            backRightLine.rotation.y = Math.PI; // Face outward from back
+            linesGroup.add(backRightLine);
+            
+            // Position the group at the center of the torso
+            linesGroup.position.y = (bbox.min.y + bbox.max.y) * 0.5;
             
             // Add to spine mesh
-            spineMesh.add(plane);
+            spineMesh.add(linesGroup);
         }
 
         function updateSpineCenterline(charRoot) {
@@ -2421,9 +2423,11 @@
             const existingCenterline = spineMesh.children.find(child => child.userData.isSpineCenterline);
             if (existingCenterline) {
                 spineMesh.remove(existingCenterline);
-                existingCenterline.geometry?.dispose?.();
-                existingCenterline.material?.map?.dispose?.();
-                existingCenterline.material?.dispose?.();
+                // Dispose of all meshes in the group
+                existingCenterline.traverse(obj => {
+                    if (obj.geometry) obj.geometry.dispose();
+                    if (obj.material) obj.material.dispose();
+                });
             }
             
             // Recreate with updated positions
@@ -2843,6 +2847,34 @@
                         const circleLines = new THREE.Line(circleGeometry, edgesMaterial);
                         cylMesh.add(circleLines);
                     }
+
+                    // Brown rings wired version hidden - using solid cylinders instead
+                    const brownRadius = cylRadius * 1.01; // Slightly larger radius for brown rings
+                    
+                    // Create two separate brown cylinders aligned with brown lines on front (1/6 and 5/6 positions)
+                    const brownCylLength = length / 16; // Match width of brown lines (8px out of 128px canvas)
+                    const brownPos1 = -width * (4/15); // Left position aligned with left brown line
+                    const brownPos2 = width * (4/15);   // Right position aligned with right brown line
+                    
+                    // Front brown cylinder
+                    const brownGeo1 = new THREE.CylinderGeometry(brownRadius, brownRadius, brownCylLength, 32, 1, false);
+                    brownGeo1.rotateZ(Math.PI / 2);
+                    const brownMat1 = new THREE.MeshPhongMaterial({ color: 0x8B6F47 });
+                    const brownMesh1 = new THREE.Mesh(brownGeo1, brownMat1);
+                    brownMesh1.castShadow = true;
+                    brownMesh1.receiveShadow = true;
+                    brownMesh1.position.set(brownPos1, topY, 0);
+                    torsoMesh.add(brownMesh1);
+                    
+                    // Back brown cylinder
+                    const brownGeo2 = new THREE.CylinderGeometry(brownRadius, brownRadius, brownCylLength, 32, 1, false);
+                    brownGeo2.rotateZ(Math.PI / 2);
+                    const brownMat2 = new THREE.MeshPhongMaterial({ color: 0x8B6F47 });
+                    const brownMesh2 = new THREE.Mesh(brownGeo2, brownMat2);
+                    brownMesh2.castShadow = true;
+                    brownMesh2.receiveShadow = true;
+                    brownMesh2.position.set(brownPos2, topY, 0);
+                    torsoMesh.add(brownMesh2);
                 } catch (e) { console.warn('Failed to add cylinder outlines', e); }
             }
             
@@ -2952,13 +2984,13 @@
             // 4. Arms
             const armW = 0.25;
             // Adjust arm scale (1.0 = original length, <1 shortens)
-            const ARM_SCALE = 0.75; // shortened more
+            const ARM_SCALE = 0.68; // shortened more
             const BASE_ARM_SEG = 0.9;
             const upperArmH = BASE_ARM_SEG * ARM_SCALE;
             const lowerArmH = BASE_ARM_SEG * ARM_SCALE;
             // raise attachment a bit so arms sit slightly higher under the torso
             const ARM_BASE_OFFSET = 0.06;
-            const ARM_ATTACH_RAISE = 0.18; // additional lift (raised further)
+            const ARM_ATTACH_RAISE = 0.27; // additional lift (raised further)
             const upperArmAttachY = 0.95 * ARM_SCALE + ARM_BASE_OFFSET + ARM_ATTACH_RAISE;
 
             // Left Arm
@@ -3051,17 +3083,27 @@
             lHandMesh.userData.joint = lHand;
             lHandMesh.userData.segmentName = 'Left_Hand';
             lHand.add(lHandMesh);
-            // Add black outline like +page.svelte
+            // Add only vertical edge outlines on the 4 corners
             try {
-                const edges = new THREE.EdgesGeometry(lHandGeo);
-                const edgeMat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
-                const edgeLines = new THREE.LineSegments(edges, edgeMat);
-                lHandMesh.add(edgeLines);
-            } catch (e) { console.warn('Failed to add hand outline', e); }
+                const lHandVerticalEdges = [];
+                const hw = handWidth / 2;
+                const hd = handDepth / 2;
+                const hy = -handHeight / 2;
+                // 4 vertical edges at corners
+                lHandVerticalEdges.push(hw, -handHeight, hd, hw, 0, hd); // front-right
+                lHandVerticalEdges.push(hw, -handHeight, -hd, hw, 0, -hd); // back-right
+                lHandVerticalEdges.push(-hw, -handHeight, hd, -hw, 0, hd); // front-left
+                lHandVerticalEdges.push(-hw, -handHeight, -hd, -hw, 0, -hd); // back-left
+                const lVertGeo = new THREE.BufferGeometry();
+                lVertGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(lHandVerticalEdges), 3));
+                const lVertMat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                const lVertLines = new THREE.LineSegments(lVertGeo, lVertMat);
+                lHandMesh.add(lVertLines);
+            } catch (e) { console.warn('Failed to add hand vertical outlines', e); }
             interactables.push(lHandMesh);
             // Position the hand group at the wrist (end of lower arm) and lower slightly
             // Lower the hand further so it sits past the wrist (tweakable extra offset)
-            const handLowerExtra = 0.06; // small downward tweak
+            const handLowerExtra = 0; // small downward tweak
             lHand.position.set(0, -lowerArmH - Math.max(handHeight * 0.5, handWidth * 0.25) - handLowerExtra, 0);
             lLowerArm.add(lHand);
 
@@ -3077,17 +3119,129 @@
             rHandMesh.userData.joint = rHand;
             rHandMesh.userData.segmentName = 'Right_Hand';
             rHand.add(rHandMesh);
+            // Add only vertical edge outlines on the 4 corners
             try {
-                const edgesR = new THREE.EdgesGeometry(rHandGeo);
-                const edgeMatR = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
-                const edgeLinesR = new THREE.LineSegments(edgesR, edgeMatR);
-                rHandMesh.add(edgeLinesR);
-            } catch (e) { console.warn('Failed to add hand outline', e); }
+                const rHandVerticalEdges = [];
+                const hw = handWidth / 2;
+                const hd = handDepth / 2;
+                const hy = -handHeight / 2;
+                // 4 vertical edges at corners
+                rHandVerticalEdges.push(hw, -handHeight, hd, hw, 0, hd); // front-right
+                rHandVerticalEdges.push(hw, -handHeight, -hd, hw, 0, -hd); // back-right
+                rHandVerticalEdges.push(-hw, -handHeight, hd, -hw, 0, hd); // front-left
+                rHandVerticalEdges.push(-hw, -handHeight, -hd, -hw, 0, -hd); // back-left
+                const rVertGeo = new THREE.BufferGeometry();
+                rVertGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(rHandVerticalEdges), 3));
+                const rVertMat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                const rVertLines = new THREE.LineSegments(rVertGeo, rVertMat);
+                rHandMesh.add(rVertLines);
+            } catch (e) { console.warn('Failed to add hand vertical outlines', e); }
             interactables.push(rHandMesh);
             // Position the right hand and lower slightly to sit past the wrist
-            const handLowerExtraR = 0.06; // small downward tweak for right hand
+            const handLowerExtraR = 0; // small downward tweak for right hand
             rHand.position.set(0, -lowerArmH - Math.max(handHeight * 0.5, handWidth * 0.25) - handLowerExtraR, 0);
             rLowerArm.add(rHand);
+
+            // Add cylinders to hands
+            // Left Hand Cylinder
+            if (lHandMesh && lHandMesh.geometry) {
+                lHandMesh.geometry.computeBoundingBox();
+                const lHandBbox = lHandMesh.geometry.boundingBox;
+                const lHandWidth = lHandBbox.max.x - lHandBbox.min.x;
+                const lHandDepth = lHandBbox.max.z - lHandBbox.min.z;
+                const lHandBottomY = lHandBbox.min.y;
+
+                const lHandRadius = lHandWidth / 2;
+                const lHandCylLength = lHandDepth * 0.97;
+                const lHandCylGeo = new THREE.CylinderGeometry(lHandRadius, lHandRadius, lHandCylLength, 32, 1, false);
+                lHandCylGeo.rotateZ(Math.PI / 2);
+                const lHandCylMat = new THREE.MeshStandardMaterial({ color: 0xFFA07A, roughness: 0.6, metalness: 0.1 });
+                const lHandCylMesh = new THREE.Mesh(lHandCylGeo, lHandCylMat);
+                lHandCylMesh.castShadow = true;
+                lHandCylMesh.receiveShadow = true;
+                lHandCylMesh.userData.segmentName = 'Left_Hand';
+                lHandCylMesh.position.set(0, lHandBottomY, 0);
+                lHandMesh.add(lHandCylMesh);
+
+                // Add circular edge outlines for left hand cylinder
+                try {
+                    const lHandCylCirclePositions = [];
+                    const lHandSegments = 32;
+                    const lHandCylRadius = lHandRadius;
+
+                    for (let j = 0; j <= lHandSegments; j++) {
+                        const angle = (j / lHandSegments) * Math.PI * 2;
+                        const x = Math.cos(angle) * lHandCylRadius;
+                        const y = Math.sin(angle) * lHandCylRadius;
+                        lHandCylCirclePositions.push(lHandCylLength/2, x, y);
+                    }
+
+                    for (let j = 0; j <= lHandSegments; j++) {
+                        const angle = (j / lHandSegments) * Math.PI * 2;
+                        const x = Math.cos(angle) * lHandCylRadius;
+                        const y = Math.sin(angle) * lHandCylRadius;
+                        lHandCylCirclePositions.push(-lHandCylLength/2, x, y);
+                    }
+
+                    if (lHandCylCirclePositions.length > 0) {
+                        const lHandCircleGeometry = new THREE.BufferGeometry();
+                        lHandCircleGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(lHandCylCirclePositions), 3));
+                        const lHandEdgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                        const lHandCircleLines = new THREE.Line(lHandCircleGeometry, lHandEdgesMaterial);
+                        lHandCylMesh.add(lHandCircleLines);
+                    }
+                } catch (e) { console.warn('Failed to add left hand cylinder outlines', e); }
+            }
+
+            // Right Hand Cylinder
+            if (rHandMesh && rHandMesh.geometry) {
+                rHandMesh.geometry.computeBoundingBox();
+                const rHandBbox = rHandMesh.geometry.boundingBox;
+                const rHandWidth = rHandBbox.max.x - rHandBbox.min.x;
+                const rHandDepth = rHandBbox.max.z - rHandBbox.min.z;
+                const rHandBottomY = rHandBbox.min.y;
+
+                const rHandRadius = rHandWidth / 2;
+                const rHandCylLength = rHandDepth * 0.97;
+                const rHandCylGeo = new THREE.CylinderGeometry(rHandRadius, rHandRadius, rHandCylLength, 32, 1, false);
+                rHandCylGeo.rotateZ(Math.PI / 2);
+                const rHandCylMat = new THREE.MeshStandardMaterial({ color: 0x98FB98, roughness: 0.6, metalness: 0.1 });
+                const rHandCylMesh = new THREE.Mesh(rHandCylGeo, rHandCylMat);
+                rHandCylMesh.castShadow = true;
+                rHandCylMesh.receiveShadow = true;
+                rHandCylMesh.userData.segmentName = 'Right_Hand';
+                rHandCylMesh.position.set(0, rHandBottomY, 0);
+                rHandMesh.add(rHandCylMesh);
+
+                // Add circular edge outlines for right hand cylinder
+                try {
+                    const rHandCylCirclePositions = [];
+                    const rHandSegments = 32;
+                    const rHandCylRadius = rHandRadius;
+
+                    for (let j = 0; j <= rHandSegments; j++) {
+                        const angle = (j / rHandSegments) * Math.PI * 2;
+                        const x = Math.cos(angle) * rHandCylRadius;
+                        const y = Math.sin(angle) * rHandCylRadius;
+                        rHandCylCirclePositions.push(rHandCylLength/2, x, y);
+                    }
+
+                    for (let j = 0; j <= rHandSegments; j++) {
+                        const angle = (j / rHandSegments) * Math.PI * 2;
+                        const x = Math.cos(angle) * rHandCylRadius;
+                        const y = Math.sin(angle) * rHandCylRadius;
+                        rHandCylCirclePositions.push(-rHandCylLength/2, x, y);
+                    }
+
+                    if (rHandCylCirclePositions.length > 0) {
+                        const rHandCircleGeometry = new THREE.BufferGeometry();
+                        rHandCircleGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(rHandCylCirclePositions), 3));
+                        const rHandEdgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                        const rHandCircleLines = new THREE.Line(rHandCircleGeometry, rHandEdgesMaterial);
+                        rHandCylMesh.add(rHandCircleLines);
+                    }
+                } catch (e) { console.warn('Failed to add right hand cylinder outlines', e); }
+            }
 
             // Add top cylinder to right upper arm
             const rUpperArmMesh = rUpperArm.children[0];
@@ -3156,7 +3310,7 @@
             root.position.set(x, 2.6 - legDelta, z);
 
             // Left Leg
-            const upperLegAttachY = -0.12 * LEG_SCALE; // raise/lower to snugly meet hips
+            const upperLegAttachY = -0.02 * LEG_SCALE; // raise/lower to snugly meet hips
             const lUpperLeg = createLimb(legW, upperLegH, legW, -0.55, material, "Left_Upper_Leg", charId);
             lUpperLeg.position.set(0.25, upperLegAttachY, 0); // attach under hips
             root.add(lUpperLeg);
@@ -3175,7 +3329,7 @@
             rUpperLeg.add(rLowerLeg);
 
             // 6. Feet
-            const footW = 0.38;
+            const footW = 0.32;
             const footH = 0.15;
             const footD = 0.58;
 
@@ -3188,11 +3342,19 @@
             lFootMesh.castShadow = true;
             lFootMesh.receiveShadow = true;
             lFootMesh.userData.joint = lFoot;
-            // Add vertical-only outline to left foot (skip horizontal edges)
+            // Add vertical-only outline to left foot (skip horizontal edges and front face)
             try {
                 const positions = lFootGeo.attributes.position.array;
                 const index = lFootGeo.index ? lFootGeo.index.array : null;
                 const linePositions = [];
+                
+                // Find max Z to identify front face
+                let maxZ = -Infinity;
+                for (let i = 0; i < positions.length; i += 3) {
+                    maxZ = Math.max(maxZ, positions[i + 2]);
+                }
+                const frontThreshold = maxZ - 0.05;
+                
                 if (index) {
                     for (let i = 0; i < index.length; i += 2) {
                         const i1 = index[i] * 3;
@@ -3202,7 +3364,8 @@
                         const xDiff = Math.abs(x2 - x1);
                         const zDiff = Math.abs(z2 - z1);
                         const yDiff = Math.abs(y2 - y1);
-                        if (xDiff < 0.02 && zDiff < 0.02 && yDiff > 0.03) {
+                        // Vertical lines, excluding front face
+                        if (xDiff < 0.02 && zDiff < 0.02 && yDiff > 0.03 && z1 < frontThreshold && z2 < frontThreshold) {
                             linePositions.push(x1, y1, z1, x2, y2, z2);
                         }
                     }
@@ -3248,6 +3411,56 @@
             lFoot.position.set(0, -lowerLegH, 0);
             lLowerLeg.add(lFoot);
 
+            // Add toe cylinder to left foot
+            if (lFootMesh && lFootMesh.geometry) {
+                lFootMesh.geometry.computeBoundingBox();
+                const lFootBbox = lFootMesh.geometry.boundingBox;
+                const lFootWidth = lFootBbox.max.x - lFootBbox.min.x;
+                const lFootHeight = lFootBbox.max.y - lFootBbox.min.y;
+                const lFootFrontZ = lFootBbox.max.z;
+
+                const lToeRadius = lFootHeight / 2;
+                const lToeCylLength = lFootWidth;
+                const lToeCylGeo = new THREE.CylinderGeometry(lToeRadius, lToeRadius, lToeCylLength, 32, 1, false);
+                lToeCylGeo.rotateZ(Math.PI / 2);
+                const lToeMat = new THREE.MeshStandardMaterial({ color: 0xAFEEEE, roughness: 0.6, metalness: 0.1 });
+                const lToeMesh = new THREE.Mesh(lToeCylGeo, lToeMat);
+                lToeMesh.castShadow = true;
+                lToeMesh.receiveShadow = true;
+                lToeMesh.userData.segmentName = 'Left_Foot';
+                lToeMesh.position.set(0, lFootBbox.max.y - lToeRadius, lFootFrontZ);
+                lFootMesh.add(lToeMesh);
+
+                // Add circular edge outlines for left toe cylinder
+                try {
+                    const lToeCylCirclePositions = [];
+                    const lToeSegments = 32;
+                    const lToeCylRadius = lToeRadius;
+
+                    for (let j = 0; j <= lToeSegments; j++) {
+                        const angle = (j / lToeSegments) * Math.PI;
+                        const x = Math.cos(angle) * lToeCylRadius;
+                        const y = Math.sin(angle) * lToeCylRadius;
+                        lToeCylCirclePositions.push(lToeCylLength/2, x, y);
+                    }
+
+                    for (let j = 0; j <= lToeSegments; j++) {
+                        const angle = (j / lToeSegments) * Math.PI;
+                        const x = Math.cos(angle) * lToeCylRadius;
+                        const y = Math.sin(angle) * lToeCylRadius;
+                        lToeCylCirclePositions.push(-lToeCylLength/2, x, y);
+                    }
+
+                    if (lToeCylCirclePositions.length > 0) {
+                        const lToeCircleGeometry = new THREE.BufferGeometry();
+                        lToeCircleGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(lToeCylCirclePositions), 3));
+                        const lToeEdgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                        const lToeCircleLines = new THREE.Line(lToeCircleGeometry, lToeEdgesMaterial);
+                        lToeMesh.add(lToeCircleLines);
+                    }
+                } catch (e) { console.warn('Failed to add left toe cylinder outlines', e); }
+            }
+
             const rFoot = new THREE.Group();
             rFoot.name = 'Right_Foot_' + charId;
             const rFootGeo = new THREE.BoxGeometry(footW, footH, footD);
@@ -3257,11 +3470,19 @@
             rFootMesh.castShadow = true;
             rFootMesh.receiveShadow = true;
             rFootMesh.userData.joint = rFoot;
-            // Add vertical-only outline to right foot (skip horizontal edges)
+            // Add vertical-only outline to right foot (skip horizontal edges and front face)
             try {
                 const positions = rFootGeo.attributes.position.array;
                 const index = rFootGeo.index ? rFootGeo.index.array : null;
                 const linePositions = [];
+                
+                // Find max Z to identify front face
+                let maxZ = -Infinity;
+                for (let i = 0; i < positions.length; i += 3) {
+                    maxZ = Math.max(maxZ, positions[i + 2]);
+                }
+                const frontThreshold = maxZ - 0.05;
+                
                 if (index) {
                     for (let i = 0; i < index.length; i += 2) {
                         const i1 = index[i] * 3;
@@ -3271,7 +3492,8 @@
                         const xDiff = Math.abs(x2 - x1);
                         const zDiff = Math.abs(z2 - z1);
                         const yDiff = Math.abs(y2 - y1);
-                        if (xDiff < 0.02 && zDiff < 0.02 && yDiff > 0.03) {
+                        // Vertical lines, excluding front face
+                        if (xDiff < 0.02 && zDiff < 0.02 && yDiff > 0.03 && z1 < frontThreshold && z2 < frontThreshold) {
                             linePositions.push(x1, y1, z1, x2, y2, z2);
                         }
                     }
@@ -3315,6 +3537,56 @@
             interactables.push(rFootMesh);
             rFoot.position.set(0, -lowerLegH, 0);
             rLowerLeg.add(rFoot);
+
+            // Add toe cylinder to right foot
+            if (rFootMesh && rFootMesh.geometry) {
+                rFootMesh.geometry.computeBoundingBox();
+                const rFootBbox = rFootMesh.geometry.boundingBox;
+                const rFootWidth = rFootBbox.max.x - rFootBbox.min.x;
+                const rFootHeight = rFootBbox.max.y - rFootBbox.min.y;
+                const rFootFrontZ = rFootBbox.max.z;
+
+                const rToeRadius = rFootHeight / 2;
+                const rToeCylLength = rFootWidth;
+                const rToeCylGeo = new THREE.CylinderGeometry(rToeRadius, rToeRadius, rToeCylLength, 32, 1, false);
+                rToeCylGeo.rotateZ(Math.PI / 2);
+                const rToeMat = new THREE.MeshStandardMaterial({ color: 0xFFDAB9, roughness: 0.6, metalness: 0.1 });
+                const rToeMesh = new THREE.Mesh(rToeCylGeo, rToeMat);
+                rToeMesh.castShadow = true;
+                rToeMesh.receiveShadow = true;
+                rToeMesh.userData.segmentName = 'Right_Foot';
+                rToeMesh.position.set(0, rFootBbox.max.y - rToeRadius, rFootFrontZ);
+                rFootMesh.add(rToeMesh);
+
+                // Add circular edge outlines for right toe cylinder
+                try {
+                    const rToeCylCirclePositions = [];
+                    const rToeSegments = 32;
+                    const rToeCylRadius = rToeRadius;
+
+                    for (let j = 0; j <= rToeSegments; j++) {
+                        const angle = (j / rToeSegments) * Math.PI;
+                        const x = Math.cos(angle) * rToeCylRadius;
+                        const y = Math.sin(angle) * rToeCylRadius;
+                        rToeCylCirclePositions.push(rToeCylLength/2, x, y);
+                    }
+
+                    for (let j = 0; j <= rToeSegments; j++) {
+                        const angle = (j / rToeSegments) * Math.PI;
+                        const x = Math.cos(angle) * rToeCylRadius;
+                        const y = Math.sin(angle) * rToeCylRadius;
+                        rToeCylCirclePositions.push(-rToeCylLength/2, x, y);
+                    }
+
+                    if (rToeCylCirclePositions.length > 0) {
+                        const rToeCircleGeometry = new THREE.BufferGeometry();
+                        rToeCircleGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(rToeCylCirclePositions), 3));
+                        const rToeEdgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                        const rToeCircleLines = new THREE.Line(rToeCircleGeometry, rToeEdgesMaterial);
+                        rToeMesh.add(rToeCircleLines);
+                    }
+                } catch (e) { console.warn('Failed to add right toe cylinder outlines', e); }
+            }
 
             // Default minor pose variation so it doesn't look completely rigid
             // Set initial arm rotations to zero for a straight/rest pose
@@ -4056,6 +4328,15 @@
             const originalFog = scene.fog;
             scene.fog = null;
 
+            // Store and disable directional lights (to prevent unwanted lighting changes)
+            const originalLightStates = [];
+            scene.traverse(obj => {
+                if (obj.isLight && (obj instanceof THREE.DirectionalLight || obj instanceof THREE.PointLight || obj instanceof THREE.SpotLight)) {
+                    originalLightStates.push({ light: obj, originalIntensity: obj.intensity });
+                    obj.intensity = 0;
+                }
+            });
+
             const originalBackground = scene.background;
             if (exportSettings.transparentBackground) {
                 scene.background = null;
@@ -4074,9 +4355,27 @@
             function convertMeshToBasic(mesh) {
                 originalMaterialsMap.set(mesh, mesh.material);
                 if (Array.isArray(mesh.material)) {
-                    mesh.material = mesh.material.map(m => new THREE.MeshBasicMaterial({ color: m.color.clone() }));
+                    mesh.material = mesh.material.map(m => {
+                        const newMat = new THREE.MeshPhongMaterial({ 
+                            color: m.color.clone(),
+                            shininess: 0,
+                            emissive: new THREE.Color(0x000000)
+                        });
+                        // Copy additional properties if available
+                        if (m.roughness !== undefined) newMat.shininess = Math.max(0, 100 * (1 - m.roughness));
+                        return newMat;
+                    });
                 } else {
-                    mesh.material = new THREE.MeshBasicMaterial({ color: mesh.material.color.clone() });
+                    const newMat = new THREE.MeshPhongMaterial({ 
+                        color: mesh.material.color.clone(),
+                        shininess: 0,
+                        emissive: new THREE.Color(0x000000)
+                    });
+                    // Copy additional properties if available
+                    if (mesh.material.roughness !== undefined) {
+                        newMat.shininess = Math.max(0, 100 * (1 - mesh.material.roughness));
+                    }
+                    mesh.material = newMat;
                 }
                 mesh.children.forEach(child => {
                     if (child.isMesh) convertMeshToBasic(child);
@@ -4245,6 +4544,11 @@
 
             // Restore hidden lines
             hiddenLines.forEach(obj => { obj.visible = true; });
+
+            // Restore lights
+            originalLightStates.forEach(({ light, originalIntensity }) => {
+                light.intensity = originalIntensity;
+            });
 
             // Restore scene state
             scene.background = originalBackground;

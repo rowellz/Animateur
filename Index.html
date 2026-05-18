@@ -100,7 +100,7 @@
                     </button>
 
                     <div class="pt-2 border-t border-white/10 space-y-2">
-                        <div class="rounded-xl border border-white/10 bg-white/[0.03] p-2 space-y-1.5">
+                        <div class="hidden rounded-xl border border-white/10 bg-white/[0.03] p-2 space-y-1.5">
                             <div class="flex items-center justify-between gap-2">
                                 <h2 class="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">Poses</h2>
                                 <span class="text-[10px] text-gray-500">Save poses</span>
@@ -116,8 +116,31 @@
                             <button id="delete-pose-btn" class="w-full bg-red-900/40 hover:bg-red-800/55 text-red-200 text-xs font-medium py-1 px-2 rounded-lg border border-red-900/40 transition-colors">Delete</button>
                         </div>
 
+                        <div class="rounded-xl border border-white/10 bg-white/[0.03] p-2 space-y-1.5">
+                            <div class="flex items-center justify-between gap-2">
+                                <h2 class="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">Export Tools</h2>
+                                <span class="text-[10px] text-gray-500">Animations & media</span>
+                            </div>
+                            <div class="space-y-1.5">
+                                <button id="export-sprite-sheet-btn" class="w-full bg-purple-700/80 hover:bg-purple-600/90 text-white py-1.5 px-3 rounded-lg transition-colors text-sm border border-purple-600/50 flex items-center justify-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                    Sprite Sheet
+                                </button>
+
+                                <button id="export-animation-btn" class="w-full bg-orange-700/80 hover:bg-orange-600/90 text-white py-1.5 px-3 rounded-lg transition-colors text-sm border border-orange-600/50 flex items-center justify-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                    Export Anim
+                                </button>
+
+                                <button id="import-animation-btn" class="w-full bg-teal-700/80 hover:bg-teal-600/90 text-white py-1.5 px-3 rounded-lg transition-colors text-sm border border-teal-600/50 flex items-center justify-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8v1a3 3 0 003 3h10a3 3 0 003-3V8m-4 4l4-4m0 0l4 4m-4-4v12"></path></svg>
+                                    Import Anim
+                                </button>
+                            </div>
+                        </div>
+
                         <p id="asset-status" class="text-xs text-gray-400 min-h-[1.75rem] leading-4">
-                            Save poses here. Export/import JSON.
+                            Export animations and sprites.
                         </p>
                     </div>
 
@@ -149,6 +172,12 @@
                 <button id="delete-kf-btn" class="bg-white/10 hover:bg-white/15 text-white py-1.5 px-3 rounded-lg transition-colors text-sm border border-white/10">
                     Delete Selected
                 </button>
+                <button id="copy-kf-btn" class="bg-white/10 hover:bg-white/15 text-white py-1.5 px-3 rounded-lg transition-colors text-sm border border-white/10">
+                    Copy Keyframe
+                </button>
+                <button id="mirror-kf-btn" class="bg-white/10 hover:bg-white/15 text-white py-1.5 px-3 rounded-lg transition-colors text-sm border border-white/10">
+                    Mirror Keyframe
+                </button>
                 <button id="play-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-1.5 px-4 rounded-lg transition-colors flex items-center gap-2">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
                     Play
@@ -156,23 +185,6 @@
                 <button id="clear-kf-btn" class="bg-red-900/50 hover:bg-red-800/60 text-red-200 py-1.5 px-3 rounded-lg transition-colors text-sm border border-red-900/50">
                     Clear Anim
                 </button>
-
-                <button id="export-sprite-sheet-btn" class="bg-purple-700/80 hover:bg-purple-600/90 text-white py-1.5 px-3 rounded-lg transition-colors text-sm border border-purple-600/50 flex items-center gap-1.5">
-                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    Sprite Sheet
-                </button>
-
-                <button id="export-animation-btn" class="bg-orange-700/80 hover:bg-orange-600/90 text-white py-1.5 px-3 rounded-lg transition-colors text-sm border border-orange-600/50 flex items-center gap-1.5">
-                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    Export Anim
-                </button>
-
-                <button id="import-animation-btn" class="bg-teal-700/80 hover:bg-teal-600/90 text-white py-1.5 px-3 rounded-lg transition-colors text-sm border border-teal-600/50 flex items-center gap-1.5">
-                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8v1a3 3 0 003 3h10a3 3 0 003-3V8m-4 4l4-4m0 0l4 4m-4-4v12"></path></svg>
-                    Import Anim
-                </button>
-
-                <div class="h-6 w-px bg-white/20 mx-1 hidden md:block"></div>
 
                 <label class="flex items-center gap-2 text-sm text-gray-300">
                     <span>Time</span>
@@ -594,6 +606,8 @@
             // Animation UI Listeners
             ui.addKeyframeBtn.addEventListener('click', recordKeyframeAtCurrentTime);
             ui.deleteKeyframeBtn.addEventListener('click', deleteSelectedKeyframe);
+            ui.copyKeyframeBtn.addEventListener('click', copySelectedKeyframe);
+            ui.mirrorKeyframeBtn.addEventListener('click', mirrorSelectedKeyframe);
             ui.playBtn.addEventListener('click', togglePlay);
             ui.clearKeyframesBtn.addEventListener('click', clearKeyframes);
             ui.timeInput.addEventListener('change', commitTimeInput);
@@ -671,6 +685,8 @@
             ui.selectedName = document.getElementById('selected-name');
             ui.addKeyframeBtn = document.getElementById('add-kf-btn');
             ui.deleteKeyframeBtn = document.getElementById('delete-kf-btn');
+            ui.copyKeyframeBtn = document.getElementById('copy-kf-btn');
+            ui.mirrorKeyframeBtn = document.getElementById('mirror-kf-btn');
             ui.playBtn = document.getElementById('play-btn');
             ui.clearKeyframesBtn = document.getElementById('clear-kf-btn');
             ui.keyframeCount = document.getElementById('kf-count');
@@ -2123,6 +2139,108 @@
             const replacement = keyframes[Math.min(index, keyframes.length - 1)];
             selectedKeyframeId = replacement?.id ?? null;
             setCurrentTime(replacement ? replacement.time : 0);
+        }
+
+        // Left/Right bone pairs for mirroring (base names without character index suffix)
+        const MIRROR_PAIRS = [
+            ['Left_Upper_Arm', 'Right_Upper_Arm'],
+            ['Left_Lower_Arm', 'Right_Lower_Arm'],
+            ['Left_Upper_Leg', 'Right_Upper_Leg'],
+            ['Left_Lower_Leg', 'Right_Lower_Leg'],
+            ['Left_Foot',      'Right_Foot'],
+        ];
+
+        function mirrorPose(sourcePose) {
+            const mirrored = {};
+
+            for (const boneName in sourcePose) {
+                const src = sourcePose[boneName];
+
+                // Determine the mirror counterpart name
+                let mirrorName = boneName;
+                // Strip trailing character-index suffix (e.g. "_0", "_1") to find the base
+                const suffixMatch = boneName.match(/^(.+?)(_\d+)$/);
+                if (suffixMatch) {
+                    const base   = suffixMatch[1]; // e.g. "Left_Upper_Arm"
+                    const suffix = suffixMatch[2]; // e.g. "_0"
+                    for (const [L, R] of MIRROR_PAIRS) {
+                        if (base === L)      { mirrorName = R + suffix; break; }
+                        if (base === R)      { mirrorName = L + suffix; break; }
+                    }
+                }
+
+                // Mirror quaternion: reflect across YZ plane → negate Y and Z components
+                const q = src.quaternion;
+                const mirroredQ = new THREE.Quaternion(q.x, -q.y, -q.z, q.w);
+
+                // Mirror position: negate X
+                const p = src.position;
+                const mirroredP = new THREE.Vector3(-p.x, p.y, p.z);
+
+                mirrored[mirrorName] = { position: mirroredP, quaternion: mirroredQ };
+            }
+
+            return mirrored;
+        }
+
+        function mirrorSelectedKeyframe() {
+            if (selectedKeyframeId === null) {
+                setStatus('No keyframe selected to mirror.', 'error');
+                return;
+            }
+
+            const kf = findKeyframeById(selectedKeyframeId);
+            if (!kf) {
+                setStatus('Keyframe not found.', 'error');
+                return;
+            }
+
+            kf.pose = mirrorPose(kf.pose);
+            setCurrentTime(kf.time, { applyPose: true });
+            setStatus(`Keyframe at ${kf.time.toFixed(1)}s mirrored.`, 'success');
+        }
+
+        function copySelectedKeyframe() {
+            if (selectedKeyframeId === null) {
+                setStatus('No keyframe selected to copy.', 'error');
+                return;
+            }
+
+            const keyframeToClone = findKeyframeById(selectedKeyframeId);
+            if (!keyframeToClone) {
+                setStatus('Keyframe not found.', 'error');
+                return;
+            }
+
+            // Deep copy the pose
+            const copiedPose = {};
+            for (const boneName in keyframeToClone.pose) {
+                copiedPose[boneName] = {
+                    position: keyframeToClone.pose[boneName].position.clone(),
+                    quaternion: keyframeToClone.pose[boneName].quaternion.clone()
+                };
+            }
+
+            // Create new keyframe at the end with 0.5 second offset
+            let newTime = 0;
+            if (keyframes.length > 0) {
+                const maxTime = Math.max(...keyframes.map(f => f.time));
+                newTime = maxTime + 0.5;
+            }
+
+            const newKeyframe = {
+                id: nextKeyframeId,
+                time: newTime,
+                pose: copiedPose
+            };
+
+            nextKeyframeId += 1;
+            keyframes.push(newKeyframe);
+            sortKeyframes();
+
+            selectedKeyframeId = newKeyframe.id;
+            setCurrentTime(newKeyframe.time, { applyPose: false });
+            setStatus(`Keyframe copied to ${newTime.toFixed(1)}s`, 'success');
         }
 
         function clearKeyframes() {

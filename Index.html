@@ -2498,7 +2498,7 @@
             
             // Left line (brown)
             const leftGeo = new THREE.PlaneGeometry(lineWidth, lineHeight);
-            const leftMat = new THREE.MeshPhongMaterial({ color: 0x8B6F47 });
+            const leftMat = new THREE.MeshBasicMaterial({ color: 0x8B6F47 });
             const leftLine = new THREE.Mesh(leftGeo, leftMat);
             leftLine.castShadow = true;
             leftLine.receiveShadow = true;
@@ -2507,7 +2507,7 @@
             
             // Right line (brown)
             const rightGeo = new THREE.PlaneGeometry(lineWidth, lineHeight);
-            const rightMat = new THREE.MeshPhongMaterial({ color: 0x8B6F47 });
+            const rightMat = new THREE.MeshBasicMaterial({ color: 0x8B6F47 });
             const rightLine = new THREE.Mesh(rightGeo, rightMat);
             rightLine.castShadow = true;
             rightLine.receiveShadow = true;
@@ -2516,7 +2516,7 @@
             
             // Back left line (brown)
             const backLeftGeo = new THREE.PlaneGeometry(lineWidth, lineHeight);
-            const backLeftMat = new THREE.MeshPhongMaterial({ color: 0x8B6F47 });
+            const backLeftMat = new THREE.MeshBasicMaterial({ color: 0x8B6F47 });
             const backLeftLine = new THREE.Mesh(backLeftGeo, backLeftMat);
             backLeftLine.castShadow = true;
             backLeftLine.receiveShadow = true;
@@ -2526,7 +2526,7 @@
             
             // Back right line (brown)
             const backRightGeo = new THREE.PlaneGeometry(lineWidth, lineHeight);
-            const backRightMat = new THREE.MeshPhongMaterial({ color: 0x8B6F47 });
+            const backRightMat = new THREE.MeshBasicMaterial({ color: 0x8B6F47 });
             const backRightLine = new THREE.Mesh(backRightGeo, backRightMat);
             backRightLine.castShadow = true;
             backRightLine.receiveShadow = true;
@@ -2995,7 +2995,7 @@
                     // Front brown cylinder
                     const brownGeo1 = new THREE.CylinderGeometry(brownRadius, brownRadius, brownCylLength, 32, 1, false);
                     brownGeo1.rotateZ(Math.PI / 2);
-                    const brownMat1 = new THREE.MeshPhongMaterial({ color: 0x8B6F47 });
+                    const brownMat1 = new THREE.MeshBasicMaterial({ color: 0x8B6F47 });
                     const brownMesh1 = new THREE.Mesh(brownGeo1, brownMat1);
                     brownMesh1.castShadow = true;
                     brownMesh1.receiveShadow = true;
@@ -3005,7 +3005,7 @@
                     // Back brown cylinder
                     const brownGeo2 = new THREE.CylinderGeometry(brownRadius, brownRadius, brownCylLength, 32, 1, false);
                     brownGeo2.rotateZ(Math.PI / 2);
-                    const brownMat2 = new THREE.MeshPhongMaterial({ color: 0x8B6F47 });
+                    const brownMat2 = new THREE.MeshBasicMaterial({ color: 0x8B6F47 });
                     const brownMesh2 = new THREE.Mesh(brownGeo2, brownMat2);
                     brownMesh2.castShadow = true;
                     brownMesh2.receiveShadow = true;
@@ -4476,7 +4476,17 @@
             const originalBackground = scene.background;
             if (exportSettings.transparentBackground) {
                 scene.background = null;
-                renderer.setClearAlpha(0);
+            }
+
+            // Create a dedicated export renderer matching +page.svelte settings:
+            // antialias: false avoids semi-transparent edge pixels blending with the
+            // transparent background (which causes darkened/wrong-shade edges).
+            // preserveDrawingBuffer: true ensures the framebuffer stays valid when
+            // drawImage reads it after render().
+            const exportRenderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true, alpha: true });
+            exportRenderer.setPixelRatio(1);
+            if (exportSettings.transparentBackground) {
+                exportRenderer.setClearAlpha(0);
             }
 
             const originalCameraPos = camera.position.clone();
@@ -4491,31 +4501,15 @@
             function convertMeshToBasic(mesh) {
                 originalMaterialsMap.set(mesh, mesh.material);
                 if (Array.isArray(mesh.material)) {
-                    mesh.material = mesh.material.map(m => {
-                        const newMat = new THREE.MeshPhongMaterial({ 
-                            color: m.color.clone(),
-                            shininess: 0,
-                            emissive: new THREE.Color(0x000000)
-                        });
-                        // Copy additional properties if available
-                        if (m.roughness !== undefined) newMat.shininess = Math.max(0, 100 * (1 - m.roughness));
-                        return newMat;
-                    });
+                    mesh.material = mesh.material.map(m => new THREE.MeshBasicMaterial({ color: m.color.clone() }));
                 } else {
-                    const newMat = new THREE.MeshPhongMaterial({ 
-                        color: mesh.material.color.clone(),
-                        shininess: 0,
-                        emissive: new THREE.Color(0x000000)
-                    });
-                    // Copy additional properties if available
-                    if (mesh.material.roughness !== undefined) {
-                        newMat.shininess = Math.max(0, 100 * (1 - mesh.material.roughness));
-                    }
-                    mesh.material = newMat;
+                    mesh.material = new THREE.MeshBasicMaterial({ color: mesh.material.color.clone() });
                 }
-                mesh.children.forEach(child => {
-                    if (child.isMesh) convertMeshToBasic(child);
-                });
+                // No recursive child processing here — traverse() in the outer loop
+                // already visits all descendants. Recursing here would cause each child
+                // mesh to be converted twice, overwriting its originalMaterialsMap entry
+                // with the already-converted BasicMaterial, so restore would leave it as
+                // BasicMaterial (flat/unlit) instead of the original StandardMaterial.
             }
 
             characters.forEach(charRoot => {
@@ -4533,10 +4527,7 @@
                 }
             });
 
-            // Resize renderer to export resolution
-            const origPixelRatio = renderer.getPixelRatio();
-            renderer.setPixelRatio(1);
-            renderer.setSize(exportSettings.width, exportSettings.height, false);
+            exportRenderer.setSize(exportSettings.width, exportSettings.height, false);
             camera.aspect = exportSettings.width / exportSettings.height;
             camera.updateProjectionMatrix();
 
@@ -4625,7 +4616,7 @@
                         headMesh.add(bLine);
                     }
 
-                    renderer.render(scene, camera);
+                    exportRenderer.render(scene, camera);
 
                     let dx = 0, dy = 0;
                     if (exportSettings.layout === 'horizontal') {
@@ -4674,9 +4665,9 @@
                             const srcY = Math.max(0, cropY);
                             const srcW = Math.min(cropWidth, sourceWidth - srcX);
                             const srcH = Math.min(cropHeight, sourceHeight - srcY);
-                            ctx.drawImage(renderer.domElement, srcX, srcY, srcW, srcH, dx, dy, srcW, srcH);
+                            ctx.drawImage(exportRenderer.domElement, srcX, srcY, srcW, srcH, dx, dy, srcW, srcH);
                         } else {
-                            ctx.drawImage(renderer.domElement, dx, dy);
+                            ctx.drawImage(exportRenderer.domElement, dx, dy);
                         }
                     }
 
@@ -4713,22 +4704,18 @@
                 light.intensity = originalIntensity;
             });
 
-            // Restore scene state
+            // Dispose the export renderer and restore scene state
+            exportRenderer.dispose();
+
             scene.background = originalBackground;
             scene.fog = originalFog;
             if (grid) grid.visible = true;
             if (floor) floor.visible = true;
 
-            renderer.setPixelRatio(origPixelRatio);
-            renderer.setSize(window.innerWidth, window.innerHeight, false);
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             camera.position.copy(originalCameraPos);
             camera.lookAt(0, 2.5, 0);
-
-            if (exportSettings.transparentBackground) {
-                renderer.setClearAlpha(1);
-            }
 
             // Restore summon VFX
             if (activeAnimationEffects) applyAnimationEffectsState(currentTime);

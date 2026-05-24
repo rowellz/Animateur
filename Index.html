@@ -148,8 +148,12 @@
                     <div class="rounded-xl border border-white/10 bg-white/[0.03] p-2 space-y-1.5">
                         <div class="flex items-center justify-between gap-2">
                             <h2 class="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">Body Colors</h2>
-                            <span class="text-[10px] text-gray-500">Per segment</span>
+                            <div class="flex gap-1">
+                                <button id="import-colors-btn" title="Import colors" class="text-[10px] text-gray-400 hover:text-white bg-white/5 hover:bg-white/15 border border-white/10 rounded px-1.5 py-0.5 transition-colors">Import</button>
+                                <button id="export-colors-btn" title="Export colors" class="text-[10px] text-gray-400 hover:text-white bg-white/5 hover:bg-white/15 border border-white/10 rounded px-1.5 py-0.5 transition-colors">Export</button>
+                            </div>
                         </div>
+                        <input id="import-colors-file" type="file" accept=".json" class="hidden">
                         <div id="body-colors-container" class="space-y-1 max-h-48 overflow-y-auto pr-1"></div>
                     </div>
                 </div>
@@ -300,11 +304,6 @@
             </label>
 
             <label class="flex items-center gap-2 cursor-pointer">
-                <input id="exp-normalize-bg" type="checkbox" class="accent-purple-400">
-                <span class="text-gray-300">Normalize Background</span>
-            </label>
-
-            <label class="flex items-center gap-2 cursor-pointer">
                 <input id="exp-bounding-box" type="checkbox" class="accent-purple-400">
                 <span class="text-gray-300">Center Crop (from center)</span>
             </label>
@@ -422,7 +421,6 @@
             layout: 'grid',
             transparentBackground: false,
             normalizeHeadColor: false,
-            normalizeBackground: false,
             useBoundingBox: false,
             boundingBoxWidth: 100,
             boundingBoxHeight: 300,
@@ -669,6 +667,38 @@
 
             // Build color UI
             buildBodyColorUI();
+
+            document.getElementById('export-colors-btn').addEventListener('click', () => {
+                const json = JSON.stringify(bodySegmentColors, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const link = document.createElement('a');
+                link.download = 'body-colors.json';
+                link.href = URL.createObjectURL(blob);
+                link.click();
+                URL.revokeObjectURL(link.href);
+            });
+
+            document.getElementById('import-colors-btn').addEventListener('click', () => {
+                document.getElementById('import-colors-file').click();
+            });
+
+            document.getElementById('import-colors-file').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        const data = JSON.parse(ev.target.result);
+                        Object.keys(bodySegmentColors).forEach(k => {
+                            if (data[k]) bodySegmentColors[k] = data[k];
+                        });
+                        buildBodyColorUI();
+                        Object.keys(bodySegmentColors).forEach(k => applyBodySegmentColor(k));
+                    } catch { alert('Invalid color file.'); }
+                };
+                reader.readAsText(file);
+                e.target.value = '';
+            });
 
             // Add first character
             createCharacter();
@@ -4418,7 +4448,6 @@
             document.getElementById('exp-layout').value = exportSettings.layout;
             document.getElementById('exp-transparent').checked = exportSettings.transparentBackground;
             document.getElementById('exp-normalize-head').checked = exportSettings.normalizeHeadColor;
-            document.getElementById('exp-normalize-bg').checked = exportSettings.normalizeBackground;
             document.getElementById('exp-bounding-box').checked = exportSettings.useBoundingBox;
             document.getElementById('exp-bb-width').value = exportSettings.boundingBoxWidth;
             document.getElementById('exp-bb-height').value = exportSettings.boundingBoxHeight;
@@ -4438,7 +4467,6 @@
             exportSettings.layout = document.getElementById('exp-layout').value;
             exportSettings.transparentBackground = document.getElementById('exp-transparent').checked;
             exportSettings.normalizeHeadColor = document.getElementById('exp-normalize-head').checked;
-            exportSettings.normalizeBackground = document.getElementById('exp-normalize-bg').checked;
             exportSettings.useBoundingBox = document.getElementById('exp-bounding-box').checked;
             exportSettings.boundingBoxWidth = parseInt(document.getElementById('exp-bb-width').value) || 100;
             exportSettings.boundingBoxHeight = parseInt(document.getElementById('exp-bb-height').value) || 300;
@@ -4474,9 +4502,7 @@
             });
 
             const originalBackground = scene.background;
-            if (exportSettings.transparentBackground) {
-                scene.background = null;
-            }
+            scene.background = null; // always transparent so alpha channel can be used for auto tight-bounds detection
 
             // Create a dedicated export renderer matching +page.svelte settings:
             // antialias: false avoids semi-transparent edge pixels blending with the
@@ -4485,9 +4511,7 @@
             // drawImage reads it after render().
             const exportRenderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true, alpha: true });
             exportRenderer.setPixelRatio(1);
-            if (exportSettings.transparentBackground) {
-                exportRenderer.setClearAlpha(0);
-            }
+            exportRenderer.setClearAlpha(0); // always use alpha channel for auto tight-bounds detection
 
             const originalCameraPos = camera.position.clone();
             const originalAspect = camera.aspect;
@@ -4534,25 +4558,9 @@
             const directions = 8;
             const frames = keyframes.length;
 
-            const cellWidth = exportSettings.useBoundingBox ? exportSettings.boundingBoxWidth : exportSettings.width;
-            const cellHeight = exportSettings.useBoundingBox ? exportSettings.boundingBoxHeight : exportSettings.height;
-
-            let sheetWidth, sheetHeight;
-            if (exportSettings.layout === 'horizontal') {
-                sheetWidth = cellWidth * (frames * directions);
-                sheetHeight = cellHeight;
-            } else if (exportSettings.layout === 'vertical') {
-                sheetWidth = cellWidth;
-                sheetHeight = cellHeight * (frames * directions);
-            } else {
-                sheetWidth = cellWidth * frames;
-                sheetHeight = cellHeight * directions;
-            }
-
-            exportCanvas.width = sheetWidth;
-            exportCanvas.height = sheetHeight;
-            const ctx = exportCanvas.getContext('2d', { alpha: true });
-            if (ctx) ctx.imageSmoothingEnabled = false;
+            // Frames stored here; canvas dimensions are computed after tight-bounds detection
+            const renderedFrames = [];
+            let autoMinX = Infinity, autoMinY = Infinity, autoMaxX = -Infinity, autoMaxY = -Infinity;
 
             // Find head mesh (first character, first Head_ group child mesh)
             let headMesh = null;
@@ -4618,60 +4626,98 @@
 
                     exportRenderer.render(scene, camera);
 
-                    let dx = 0, dy = 0;
-                    if (exportSettings.layout === 'horizontal') {
-                        dx = (d * frames + f) * cellWidth;
-                    } else if (exportSettings.layout === 'vertical') {
-                        dy = (d * frames + f) * cellHeight;
-                    } else {
-                        dx = f * cellWidth;
-                        dy = d * cellHeight;
-                    }
+                    // Store this frame as a canvas snapshot
+                    const frameCanvas = document.createElement('canvas');
+                    frameCanvas.width = exportSettings.width;
+                    frameCanvas.height = exportSettings.height;
+                    const fCtx = frameCanvas.getContext('2d');
+                    fCtx.drawImage(exportRenderer.domElement, 0, 0);
 
-                    if (ctx) {
-                        // Normalize background pixel
-                        if (exportSettings.normalizeBackground && headMesh) {
-                            const headWorldPos = new THREE.Vector3();
-                            headMesh.getWorldPosition(headWorldPos);
-                            const viewVec = new THREE.Vector3().subVectors(camera.position, headWorldPos).normalize();
-                            const headQuat = new THREE.Quaternion();
-                            headMesh.getWorldQuaternion(headQuat);
-                            const invQuat = headQuat.clone().invert();
-                            viewVec.applyQuaternion(invQuat);
-                            let theta = Math.atan2(viewVec.x, viewVec.z);
-                            const sectorAngle = Math.PI / 4;
-                            let index = Math.round(theta / sectorAngle) - 1;
-                            if (index < 0) index += 8;
-                            index = index % 8;
-                            ctx.save();
-                            ctx.globalAlpha = 1.0;
-                            ctx.fillStyle = `#${REF_HEAD_COLORS_EXPORT[index].toString(16).padStart(6, '0')}`;
-                            const cornerWidth = Math.ceil(cellWidth * 0.01);
-                            const cornerHeight = Math.ceil(cellHeight * 0.01);
-                            ctx.clearRect(dx, dy, cornerWidth, cornerHeight);
-                            ctx.fillRect(dx, dy, cornerWidth, cornerHeight);
-                            ctx.globalAlpha = 1.0;
-                            ctx.restore();
-                        }
-
-                        if (exportSettings.useBoundingBox) {
-                            const sourceWidth = exportSettings.width;
-                            const sourceHeight = exportSettings.height;
-                            const cropWidth = exportSettings.boundingBoxWidth;
-                            const cropHeight = exportSettings.boundingBoxHeight;
-                            const cropX = (sourceWidth - cropWidth) / 2 + exportSettings.boundingBoxOffsetX;
-                            const cropY = (sourceHeight - cropHeight) / 2 + exportSettings.boundingBoxOffsetY;
-                            const srcX = Math.max(0, cropX);
-                            const srcY = Math.max(0, cropY);
-                            const srcW = Math.min(cropWidth, sourceWidth - srcX);
-                            const srcH = Math.min(cropHeight, sourceHeight - srcY);
-                            ctx.drawImage(exportRenderer.domElement, srcX, srcY, srcW, srcH, dx, dy, srcW, srcH);
-                        } else {
-                            ctx.drawImage(exportRenderer.domElement, dx, dy);
+                    // Auto-detect tight content bounds via alpha channel
+                    if (!exportSettings.useBoundingBox) {
+                        const imgData = fCtx.getImageData(0, 0, exportSettings.width, exportSettings.height);
+                        const data = imgData.data;
+                        for (let py = 0; py < exportSettings.height; py++) {
+                            for (let px = 0; px < exportSettings.width; px++) {
+                                if (data[(py * exportSettings.width + px) * 4 + 3] > 8) {
+                                    if (px < autoMinX) autoMinX = px;
+                                    if (py < autoMinY) autoMinY = py;
+                                    if (px > autoMaxX) autoMaxX = px;
+                                    if (py > autoMaxY) autoMaxY = py;
+                                }
+                            }
                         }
                     }
+
+                    renderedFrames.push({ d, f, canvas: frameCanvas });
 
                     await new Promise(r => setTimeout(r, 20));
+                }
+            }
+
+            // Compute crop region: manual bounding box or auto-detected tight bounds
+            let cropX, cropY, cropW, cropH;
+            if (exportSettings.useBoundingBox) {
+                cropW = exportSettings.boundingBoxWidth;
+                cropH = exportSettings.boundingBoxHeight;
+                cropX = (exportSettings.width - cropW) / 2 + exportSettings.boundingBoxOffsetX;
+                cropY = (exportSettings.height - cropH) / 2 + exportSettings.boundingBoxOffsetY;
+            } else {
+                // Add 2 px padding around detected tight bounds
+                const pad = 2;
+                cropX = Math.max(0, autoMinX - pad);
+                cropY = Math.max(0, autoMinY - pad);
+                const rawMaxX = Math.min(exportSettings.width - 1, autoMaxX + pad);
+                const rawMaxY = Math.min(exportSettings.height - 1, autoMaxY + pad);
+                cropW = (autoMaxX >= autoMinX) ? (rawMaxX - cropX + 1) : exportSettings.width;
+                cropH = (autoMaxY >= autoMinY) ? (rawMaxY - cropY + 1) : exportSettings.height;
+            }
+
+            const cellWidth = cropW;
+            const cellHeight = cropH;
+
+            let sheetWidth, sheetHeight;
+            if (exportSettings.layout === 'horizontal') {
+                sheetWidth = cellWidth * (frames * directions);
+                sheetHeight = cellHeight;
+            } else if (exportSettings.layout === 'vertical') {
+                sheetWidth = cellWidth;
+                sheetHeight = cellHeight * (frames * directions);
+            } else {
+                sheetWidth = cellWidth * frames;
+                sheetHeight = cellHeight * directions;
+            }
+
+            exportCanvas.width = sheetWidth;
+            exportCanvas.height = sheetHeight;
+            const ctx = exportCanvas.getContext('2d', { alpha: true });
+            if (ctx) ctx.imageSmoothingEnabled = false;
+
+            // Assemble final sheet from stored frames using the computed crop region
+            const asmSrcX = Math.max(0, Math.round(cropX));
+            const asmSrcY = Math.max(0, Math.round(cropY));
+            const asmSrcW = Math.min(cropW, exportSettings.width - asmSrcX);
+            const asmSrcH = Math.min(cropH, exportSettings.height - asmSrcY);
+
+            for (const { d, f, canvas: fCanvas } of renderedFrames) {
+                let dx = 0, dy = 0;
+                if (exportSettings.layout === 'horizontal') {
+                    dx = (d * frames + f) * cellWidth;
+                } else if (exportSettings.layout === 'vertical') {
+                    dy = (d * frames + f) * cellHeight;
+                } else {
+                    dx = f * cellWidth;
+                    dy = d * cellHeight;
+                }
+
+                if (ctx) {
+                    // Fill solid background when transparent output is not requested
+                    if (!exportSettings.transparentBackground) {
+                        ctx.fillStyle = `#${originalBackground.getHexString()}`;
+                        ctx.fillRect(dx, dy, cellWidth, cellHeight);
+                    }
+
+                    ctx.drawImage(fCanvas, asmSrcX, asmSrcY, asmSrcW, asmSrcH, dx, dy, asmSrcW, asmSrcH);
                 }
             }
 

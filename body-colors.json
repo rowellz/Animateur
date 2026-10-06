@@ -1,0 +1,16 @@
+{
+  "Hips": "#8A2BE2",
+  "Upper_Torso": "#4169E1",
+  "Lower_Torso": "#8CB4FF",
+  "Neck": "#FFFF00",
+  "Left_Upper_Arm": "#DC143C",
+  "Left_Lower_Arm": "#FF6347",
+  "Right_Upper_Arm": "#006400",
+  "Right_Lower_Arm": "#32CD32",
+  "Left_Upper_Leg": "#008B8B",
+  "Left_Lower_Leg": "#00CED1",
+  "Right_Upper_Leg": "#FF8C00",
+  "Right_Lower_Leg": "#FFA500",
+  "Left_Foot": "#AFEEEE",
+  "Right_Foot": "#FFDAB9"
+}

@@ -276,13 +276,15 @@
             <h3 class="text-base font-bold text-white mb-1">Export Options</h3>
 
             <div class="flex items-center justify-between gap-2">
-                <label class="text-gray-300">Resolution</label>
+                <label class="text-gray-300">Frame Size</label>
                 <div class="flex items-center gap-1.5">
-                    <input id="exp-width" type="number" value="128" class="w-16 bg-white/10 border border-white/15 rounded px-2 py-1 text-white text-xs outline-none focus:border-purple-400">
+                    <input id="exp-width" type="number" min="1" step="1" aria-label="Frame width" value="128" class="w-16 bg-white/10 border border-white/15 rounded px-2 py-1 text-white text-xs outline-none focus:border-purple-400">
                     <span class="text-gray-500 text-xs">×</span>
-                    <input id="exp-height" type="number" value="128" class="w-16 bg-white/10 border border-white/15 rounded px-2 py-1 text-white text-xs outline-none focus:border-purple-400">
+                    <input id="exp-height" type="number" min="1" step="1" aria-label="Frame height" value="128" class="w-16 bg-white/10 border border-white/15 rounded px-2 py-1 text-white text-xs outline-none focus:border-purple-400">
                 </div>
             </div>
+
+            <p class="text-xs text-gray-400">Width × height of each exported frame in pixels. Cropped content fits inside this size without stretching.</p>
 
             <div class="flex items-center justify-between gap-2">
                 <label class="text-gray-300">Layout</label>
@@ -299,7 +301,7 @@
             </label>
 
             <label class="flex items-center gap-2 cursor-pointer">
-                <input id="exp-normalize-head" type="checkbox" class="accent-purple-400">
+                <input id="exp-normalize-head" type="checkbox" class="accent-purple-400" checked>
                 <span class="text-gray-300">Normalize Head Color</span>
             </label>
 
@@ -311,11 +313,11 @@
             <div id="exp-bounding-box-settings" class="hidden space-y-2 pl-2 border-l border-white/10">
                 <div class="flex items-center justify-between gap-2">
                     <label class="text-gray-400 text-xs">Crop Width</label>
-                    <input id="exp-bb-width" type="number" value="100" class="w-20 bg-white/10 border border-white/15 rounded px-2 py-1 text-white text-xs outline-none focus:border-purple-400">
+                    <input id="exp-bb-width" type="number" min="1" step="1" value="100" class="w-20 bg-white/10 border border-white/15 rounded px-2 py-1 text-white text-xs outline-none focus:border-purple-400">
                 </div>
                 <div class="flex items-center justify-between gap-2">
                     <label class="text-gray-400 text-xs">Crop Height</label>
-                    <input id="exp-bb-height" type="number" value="300" class="w-20 bg-white/10 border border-white/15 rounded px-2 py-1 text-white text-xs outline-none focus:border-purple-400">
+                    <input id="exp-bb-height" type="number" min="1" step="1" value="300" class="w-20 bg-white/10 border border-white/15 rounded px-2 py-1 text-white text-xs outline-none focus:border-purple-400">
                 </div>
                 <div class="flex items-center justify-between gap-2">
                     <label class="text-gray-400 text-xs">Offset X</label>
@@ -347,7 +349,8 @@
         let characters = [];
         const bodySegmentColors = {
             'Hips': '#8A2BE2',
-            'Spine': '#4169E1',
+            'Upper_Torso': '#4169E1',
+            'Lower_Torso': '#8CB4FF',
             'Neck': '#FFFF00',
             'Left_Upper_Arm': '#DC143C',
             'Left_Lower_Arm': '#FF6347',
@@ -420,7 +423,7 @@
             height: 128,
             layout: 'grid',
             transparentBackground: false,
-            normalizeHeadColor: false,
+            normalizeHeadColor: true,
             useBoundingBox: false,
             boundingBoxWidth: 100,
             boundingBoxHeight: 300,
@@ -689,9 +692,7 @@
                 reader.onload = (ev) => {
                     try {
                         const data = JSON.parse(ev.target.result);
-                        Object.keys(bodySegmentColors).forEach(k => {
-                            if (data[k]) bodySegmentColors[k] = data[k];
-                        });
+                        importBodySegmentColors(data);
                         buildBodyColorUI();
                         Object.keys(bodySegmentColors).forEach(k => applyBodySegmentColor(k));
                     } catch { alert('Invalid color file.'); }
@@ -2460,14 +2461,19 @@
             }
         }
 
+        function setMeshHighlight(mesh, color) {
+            const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+            materials.forEach(material => material.emissive?.setHex(color));
+        }
+
         function selectJoint(mesh) {
             if(selectedMesh) {
-                selectedMesh.material.emissive.setHex(0x000000);
+                setMeshHighlight(selectedMesh, 0x000000);
             }
             selectedMesh = mesh;
             selectedJoint = mesh.userData.joint;
             // Highlight selected
-            selectedMesh.material.emissive.setHex(0x333333);
+            setMeshHighlight(selectedMesh, 0x333333);
 
             syncTransformAttachment();
 
@@ -2602,7 +2608,7 @@
 
         function deselect() {
             if(selectedMesh) {
-                selectedMesh.material.emissive.setHex(0x000000);
+                setMeshHighlight(selectedMesh, 0x000000);
                 selectedMesh = null;
             }
             selectedJoint = null;
@@ -2703,9 +2709,11 @@
                 label.className = 'text-gray-400 min-w-fit flex-1 truncate cursor-pointer hover:text-gray-300 transition-colors';
                 const displayName = segment.replace(/_/g, ' ');
                 label.textContent = displayName;
+                label.htmlFor = `body-color-${segment}`;
                 
                 const colorInput = document.createElement('input');
                 colorInput.type = 'color';
+                colorInput.id = `body-color-${segment}`;
                 colorInput.value = bodySegmentColors[segment];
                 colorInput.className = 'w-8 h-6 rounded cursor-pointer border border-white/20 hover:border-white/40 transition-colors';
                 colorInput.addEventListener('change', () => {
@@ -2723,129 +2731,77 @@
             });
         }
 
-        function applyBodySegmentColor(segment) {
-            try {
-                const color = new THREE.Color(bodySegmentColors[segment]);
-                
-                characters.forEach(character => {
-                    character.traverse(obj => {
-                        if (!obj.isMesh) return;
-                        
-                        // Check if mesh has explicit segment name in userData
-                        if (obj.userData.segmentName === segment) {
-                            // Clone materials before changing colors
-                            if (Array.isArray(obj.material)) {
-                                obj.material = obj.material.map(mat => {
-                                    const newMat = mat.clone();
-                                    if (newMat.color) {
-                                        newMat.color.copy(color);
-                                    }
-                                    return newMat;
-                                });
-                            } else if (obj.material && obj.material.color) {
-                                const newMat = obj.material.clone();
-                                newMat.color.copy(color);
-                                obj.material = newMat;
-                            }
-                            return;
-                        }
-                        
-                        // Check if this mesh belongs to the target segment via parent/userData.joint
-                        let jointName = null;
-                        if (obj.userData.joint && obj.userData.joint.name) {
-                            jointName = obj.userData.joint.name;
-                        } else if (obj.parent && obj.parent.name) {
-                            jointName = obj.parent.name;
-                        }
-                        
-                        if (!jointName || !jointName.startsWith(segment + '_')) return;
-                        
-                        // Clone materials before changing colors to avoid affecting shared materials
-                        if (Array.isArray(obj.material)) {
-                            obj.material = obj.material.map(mat => {
-                                const newMat = mat.clone();
-                                if (newMat.color) {
-                                    newMat.color.copy(color);
-                                }
-                                return newMat;
-                            });
-                        } else if (obj.material && obj.material.color) {
-                            const newMat = obj.material.clone();
-                            newMat.color.copy(color);
-                            obj.material = newMat;
-                        }
-                    });
-                });
-            } catch (error) {
-                console.warn(`Failed to apply color for segment ${segment}: ${bodySegmentColors[segment]}`, error);
-            }
-        }
-
-        function applyBodySegmentColorsToCharacter(character) {
-            const segmentNames = Object.keys(bodySegmentColors);
-            
-            segmentNames.forEach(segment => {
-                try {
-                    const color = new THREE.Color(bodySegmentColors[segment]);
-                    
-                    character.traverse(obj => {
-                        if (!obj.isMesh) return;
-                        
-                        // Check if mesh has explicit segment name in userData
-                        if (obj.userData.segmentName === segment) {
-                            // Clone materials before changing colors
-                            if (Array.isArray(obj.material)) {
-                                obj.material = obj.material.map(mat => {
-                                    const newMat = mat.clone();
-                                    if (newMat.color) {
-                                        newMat.color.copy(color);
-                                    }
-                                    return newMat;
-                                });
-                            } else if (obj.material && obj.material.color) {
-                                const newMat = obj.material.clone();
-                                newMat.color.copy(color);
-                                obj.material = newMat;
-                            }
-                            return;
-                        }
-                        
-                        // Check if this mesh belongs to the target segment via parent/userData.joint
-                        let jointName = null;
-                        if (obj.userData.joint && obj.userData.joint.name) {
-                            jointName = obj.userData.joint.name;
-                        } else if (obj.parent && obj.parent.name) {
-                            jointName = obj.parent.name;
-                        }
-                        
-                        if (!jointName || !jointName.startsWith(segment + '_')) return;
-                        
-                        // Clone materials before changing colors to avoid affecting shared materials
-                        if (Array.isArray(obj.material)) {
-                            obj.material = obj.material.map(mat => {
-                                const newMat = mat.clone();
-                                if (newMat.color) {
-                                    newMat.color.copy(color);
-                                }
-                                return newMat;
-                            });
-                        } else if (obj.material && obj.material.color) {
-                            const newMat = obj.material.clone();
-                            newMat.color.copy(color);
-                            obj.material = newMat;
-                        }
-                    });
-                } catch (error) {
-                    console.warn(`Failed to apply color for segment ${segment}: ${bodySegmentColors[segment]}`, error);
-                }
+        function importBodySegmentColors(data) {
+            Object.keys(bodySegmentColors).forEach(segment => {
+                // Older palettes used one Spine color for the entire torso.
+                const legacyColor = segment === 'Upper_Torso' || segment === 'Lower_Torso'
+                    ? data.Spine
+                    : null;
+                const color = data[segment] || legacyColor;
+                if (color) bodySegmentColors[segment] = color;
             });
         }
 
-        function createLimb(width, height, depth, pivotYOffset, material, name, charId) {
+        function applyBodySegmentColorToCharacter(character, segment) {
+            const color = new THREE.Color(bodySegmentColors[segment]);
+            character.traverse(obj => {
+                if (!obj.isMesh) return;
+                const jointName = obj.userData.joint?.name || obj.parent?.name || '';
+                const meshSegment = obj.userData.segmentName;
+                const recolor = material => {
+                    // A multi-color mesh can assign a segment to each material.
+                    const explicitSegment = material.userData.segmentName || meshSegment;
+                    const matches = explicitSegment
+                        ? explicitSegment === segment
+                        : jointName.startsWith(segment + '_');
+                    if (!matches || !material.color) return material;
+                    const coloredMaterial = material.clone();
+                    coloredMaterial.color.copy(color);
+                    return coloredMaterial;
+                };
+                obj.material = Array.isArray(obj.material)
+                    ? obj.material.map(recolor)
+                    : recolor(obj.material);
+            });
+        }
+
+        function applyBodySegmentColor(segment) {
+            characters.forEach(character => applyBodySegmentColorToCharacter(character, segment));
+        }
+
+        function applyBodySegmentColorsToCharacter(character) {
+            Object.keys(bodySegmentColors).forEach(segment => {
+                applyBodySegmentColorToCharacter(character, segment);
+            });
+        }
+
+        function splitTorsoColors(mesh) {
+            // Keep one Spine joint and the full mesh bounds for posing and decorations.
+            // Two vertical subdivisions put a vertex row exactly at the torso midpoint.
+            const geometry = mesh.geometry;
+            geometry.computeBoundingBox();
+            const middleY = (geometry.boundingBox.min.y + geometry.boundingBox.max.y) / 2;
+            const position = geometry.attributes.position;
+            const index = geometry.index;
+            geometry.clearGroups();
+            for (let i = 0; i < index.count; i += 3) {
+                const centerY = (position.getY(index.getX(i))
+                    + position.getY(index.getX(i + 1))
+                    + position.getY(index.getX(i + 2))) / 3;
+                geometry.addGroup(i, 3, centerY > middleY ? 0 : 1);
+            }
+            mesh.material = ['Upper_Torso', 'Lower_Torso'].map(segment => {
+                const material = mesh.material.clone();
+                material.userData.segmentName = segment;
+                return material;
+            });
+        }
+
+        function createLimb(width, height, depth, pivotYOffset, material, name, charId, heightSegments = 1) {
             const group = new THREE.Group();
             group.name = name + "_" + charId;
             
-            const geometry = new THREE.BoxGeometry(width, height, depth);
+            const geometry = new THREE.BoxGeometry(width, height, depth, 1, heightSegments, 1);
             // Translate geometry so the group origin acts as the joint pivot
             geometry.translate(0, pivotYOffset, 0); 
             
@@ -2959,12 +2915,13 @@
             const SPINE_SCALE = 0.92; // 1.0 = original, <1 shortens
             const SPINE_DEPTH_SCALE = 0.82; // reduce torso depth (front-back)
             const torsoHeight = 0.85 * SPINE_SCALE;
-            const torso = createLimb(1.0, torsoHeight, 0.6 * SPINE_DEPTH_SCALE, 0.42 * SPINE_SCALE, material, "Spine", charId);
+            const torso = createLimb(1.0, torsoHeight, 0.6 * SPINE_DEPTH_SCALE, 0.42 * SPINE_SCALE, material, "Spine", charId, 2);
             torso.position.set(0, 0.2, 0); // Attached slightly above hip center
             root.add(torso);
             
             // Add top cylinder to torso for "Box + Top Cylinder" effect
             const torsoMesh = torso.children[0]; // Get the mesh from the group
+            splitTorsoColors(torsoMesh);
             if (torsoMesh && torsoMesh.geometry) {
                 torsoMesh.geometry.computeBoundingBox();
                 const bbox = torsoMesh.geometry.boundingBox;
@@ -2980,7 +2937,7 @@
                 const cylMesh = new THREE.Mesh(cylGeo, cylMat);
                 cylMesh.castShadow = true;
                 cylMesh.receiveShadow = true;
-                cylMesh.userData.segmentName = 'Spine';
+                cylMesh.userData.segmentName = 'Upper_Torso';
                 cylMesh.position.set(0, topY, 0);
                 torsoMesh.add(cylMesh);
 
@@ -4461,19 +4418,64 @@
             ui.exportModal.classList.add('hidden');
         }
 
+        function readExportDimension(id, fallback) {
+            const value = Number.parseInt(document.getElementById(id).value, 10);
+            return Number.isFinite(value) && value > 0 ? value : fallback;
+        }
+
         function doExport() {
-            exportSettings.width = parseInt(document.getElementById('exp-width').value) || 128;
-            exportSettings.height = parseInt(document.getElementById('exp-height').value) || 128;
+            exportSettings.width = readExportDimension('exp-width', 128);
+            exportSettings.height = readExportDimension('exp-height', 128);
             exportSettings.layout = document.getElementById('exp-layout').value;
             exportSettings.transparentBackground = document.getElementById('exp-transparent').checked;
             exportSettings.normalizeHeadColor = document.getElementById('exp-normalize-head').checked;
             exportSettings.useBoundingBox = document.getElementById('exp-bounding-box').checked;
-            exportSettings.boundingBoxWidth = parseInt(document.getElementById('exp-bb-width').value) || 100;
-            exportSettings.boundingBoxHeight = parseInt(document.getElementById('exp-bb-height').value) || 300;
+            exportSettings.boundingBoxWidth = readExportDimension('exp-bb-width', 100);
+            exportSettings.boundingBoxHeight = readExportDimension('exp-bb-height', 300);
             exportSettings.boundingBoxOffsetX = parseInt(document.getElementById('exp-bb-offset-x').value) || 0;
-            exportSettings.boundingBoxOffsetY = parseInt(document.getElementById('exp-bb-offset-y').value) || -30;
+            const offsetY = Number.parseInt(document.getElementById('exp-bb-offset-y').value, 10);
+            exportSettings.boundingBoxOffsetY = Number.isFinite(offsetY) ? offsetY : -30;
             closeExportModal();
-            generateSpriteSheet();
+            return generateSpriteSheet();
+        }
+
+        function applySpritePalette(canvas, colors) {
+            const palette = [...colors];
+            if (palette.length === 0) return;
+            const context = canvas.getContext('2d');
+            const image = context.getImageData(0, 0, canvas.width, canvas.height);
+            const pixels = image.data;
+            const nearestColors = new Map(palette.map(color => [color, color]));
+
+            for (let i = 0; i < pixels.length; i += 4) {
+                // Hard coverage: discarded edge pixels have no hidden RGB data.
+                if (pixels[i + 3] < 128) {
+                    pixels[i] = pixels[i + 1] = pixels[i + 2] = pixels[i + 3] = 0;
+                    continue;
+                }
+
+                const rgb = (pixels[i] << 16) | (pixels[i + 1] << 8) | pixels[i + 2];
+                let nearest = nearestColors.get(rgb);
+                if (nearest === undefined) {
+                    let bestDistance = Infinity;
+                    for (const color of palette) {
+                        const dr = pixels[i] - ((color >> 16) & 255);
+                        const dg = pixels[i + 1] - ((color >> 8) & 255);
+                        const db = pixels[i + 2] - (color & 255);
+                        const distance = dr * dr + dg * dg + db * db;
+                        if (distance < bestDistance) {
+                            bestDistance = distance;
+                            nearest = color;
+                        }
+                    }
+                    nearestColors.set(rgb, nearest);
+                }
+                pixels[i] = (nearest >> 16) & 255;
+                pixels[i + 1] = (nearest >> 8) & 255;
+                pixels[i + 2] = nearest & 255;
+                pixels[i + 3] = 255;
+            }
+            context.putImageData(image, 0, 0);
         }
 
         async function generateSpriteSheet() {
@@ -4511,6 +4513,8 @@
             // drawImage reads it after render().
             const exportRenderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true, alpha: true });
             exportRenderer.setPixelRatio(1);
+            exportRenderer.outputColorSpace = THREE.SRGBColorSpace;
+            exportRenderer.toneMapping = THREE.NoToneMapping;
             exportRenderer.setClearAlpha(0); // always use alpha channel for auto tight-bounds detection
 
             const originalCameraPos = camera.position.clone();
@@ -4521,9 +4525,17 @@
 
             // Store original materials and convert all meshes to MeshBasicMaterial
             const originalMaterialsMap = new Map();
+            const exportPalette = new Set();
+            if (!exportSettings.transparentBackground) exportPalette.add(originalBackground.getHex());
+            if (exportSettings.normalizeHeadColor) {
+                REF_HEAD_COLORS_EXPORT.forEach(color => exportPalette.add(color));
+                exportPalette.add(0xffffff); // Head/neck separator.
+            }
 
             function convertMeshToBasic(mesh) {
                 originalMaterialsMap.set(mesh, mesh.material);
+                const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+                materials.forEach(material => exportPalette.add(material.color.getHex()));
                 if (Array.isArray(mesh.material)) {
                     mesh.material = mesh.material.map(m => new THREE.MeshBasicMaterial({ color: m.color.clone() }));
                 } else {
@@ -4631,6 +4643,7 @@
                     frameCanvas.width = exportSettings.width;
                     frameCanvas.height = exportSettings.height;
                     const fCtx = frameCanvas.getContext('2d');
+                    fCtx.imageSmoothingEnabled = false;
                     fCtx.drawImage(exportRenderer.domElement, 0, 0);
 
                     // Auto-detect tight content bounds via alpha channel
@@ -4673,8 +4686,9 @@
                 cropH = (autoMaxY >= autoMinY) ? (rawMaxY - cropY + 1) : exportSettings.height;
             }
 
-            const cellWidth = cropW;
-            const cellHeight = cropH;
+            // Cropping controls framing, not the user's requested output resolution.
+            const cellWidth = exportSettings.width;
+            const cellHeight = exportSettings.height;
 
             let sheetWidth, sheetHeight;
             if (exportSettings.layout === 'horizontal') {
@@ -4693,11 +4707,15 @@
             const ctx = exportCanvas.getContext('2d', { alpha: true });
             if (ctx) ctx.imageSmoothingEnabled = false;
 
-            // Assemble final sheet from stored frames using the computed crop region
-            const asmSrcX = Math.max(0, Math.round(cropX));
-            const asmSrcY = Math.max(0, Math.round(cropY));
-            const asmSrcW = Math.min(cropW, exportSettings.width - asmSrcX);
-            const asmSrcH = Math.min(cropH, exportSettings.height - asmSrcY);
+            // Fit the full crop into each fixed-size cell, preserving aspect ratio.
+            // Keep out-of-bounds crop areas as padding so offsets don't shift the image.
+            const cropScale = Math.min(cellWidth / cropW, cellHeight / cropH);
+            const asmSrcX = Math.max(0, cropX);
+            const asmSrcY = Math.max(0, cropY);
+            const asmSrcW = Math.max(0, Math.min(exportSettings.width, cropX + cropW) - asmSrcX);
+            const asmSrcH = Math.max(0, Math.min(exportSettings.height, cropY + cropH) - asmSrcY);
+            const frameOffsetX = (cellWidth - cropW * cropScale) / 2 + (asmSrcX - cropX) * cropScale;
+            const frameOffsetY = (cellHeight - cropH * cropScale) / 2 + (asmSrcY - cropY) * cropScale;
 
             for (const { d, f, canvas: fCanvas } of renderedFrames) {
                 let dx = 0, dy = 0;
@@ -4717,7 +4735,10 @@
                         ctx.fillRect(dx, dy, cellWidth, cellHeight);
                     }
 
-                    ctx.drawImage(fCanvas, asmSrcX, asmSrcY, asmSrcW, asmSrcH, dx, dy, asmSrcW, asmSrcH);
+                    if (asmSrcW > 0 && asmSrcH > 0) {
+                        ctx.drawImage(fCanvas, asmSrcX, asmSrcY, asmSrcW, asmSrcH,
+                            dx + frameOffsetX, dy + frameOffsetY, asmSrcW * cropScale, asmSrcH * cropScale);
+                    }
                 }
             }
 
@@ -4729,6 +4750,10 @@
                     }
                 }
             }
+
+            // Run after all cropping/compositing so the saved PNG has only exact
+            // material colors and binary alpha, including at segment boundaries.
+            applySpritePalette(exportCanvas, exportPalette);
 
             const link = document.createElement('a');
             link.download = `sprite_${Date.now()}.png`;
@@ -4790,4 +4815,3 @@
     </script>
 </body>
 </html>
-

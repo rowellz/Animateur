@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Default character · Walk cycle</title>
+<style>
+  body { margin: 40px auto; padding: 0 24px; max-width: 720px; background: #181b24; color: #eef1fa; font: 16px system-ui; }
+  h1 { font-size: 28px; }
+  p { color: #b8c1d8; line-height: 1.6; }
+  canvas { width: min(100%, 512px); height: auto; display: block; image-rendering: pixelated; border-radius: 12px; background: repeating-conic-gradient(#303746 0% 25%, #28303e 0% 50%) 0 / 32px 32px; }
+  .controls { display: flex; gap: 12px; align-items: center; margin: 20px 0; flex-wrap: wrap; }
+  button, select { padding: 8px 12px; font: inherit; }
+  a { color: #99c9ff; }
+</style>
+<h1>Default character · Walk cycle</h1>
+<p>Long-stride walk · normalized head colors · 16 frames · 16 fps · one-second loop · eight directions</p>
+<canvas width="165" height="165" aria-label="Animated preview of the default character walking"></canvas>
+<div class="controls">
+  <button id="play">Pause</button>
+  <label>View <select id="direction">
+    <option>Front right</option><option>Front</option><option>Front left</option><option>Left</option>
+    <option>Back left</option><option>Back</option><option>Back right</option><option>Right</option>
+  </select></label>
+  <span id="frame"></span>
+</div>
+<p><a href="default-walk-cycle.png">Sprite sheet PNG</a> · <a href="default-walk-cycle.animation.json">Animation JSON</a> · <a href="default-walk-cycle.sprites.json">Frame metadata</a></p>
+<p>Import the animation JSON with <strong>Import Anim</strong> in <a href="../Index.html">Fast Poser</a>. The sheet uses 165 × 165 cells: frames run left to right, with one viewing direction per row.</p>
+<script>
+const canvas=document.querySelector('canvas'), ctx=canvas.getContext('2d');
+ctx.imageSmoothingEnabled=false;
+const image=new Image();
+let playing=true, elapsed=0, previous;
+document.querySelector('#play').onclick=e=>{playing=!playing;e.target.textContent=playing?'Pause':'Play';};
+image.onload=()=>requestAnimationFrame(function draw(now){
+  if(previous!==undefined && playing) elapsed+=now-previous;
+  previous=now;
+  const frame=Math.floor(elapsed/62.5)%16;
+  const row=document.querySelector('#direction').selectedIndex;
+  ctx.clearRect(0,0,165,165);
+  ctx.drawImage(image,frame*165,row*165,165,165,0,0,165,165);
+  document.querySelector('#frame').textContent=`Frame ${frame+1} / 16`;
+  requestAnimationFrame(draw);
+});
+image.onerror=()=>document.querySelector('#frame').textContent='Unable to load sprite sheet.';
+image.src='default-walk-cycle.png';
+</script>
+</html>

@@ -4439,6 +4439,23 @@
             return generateSpriteSheet();
         }
 
+        function addNormalizedHeadSeparator(headMesh) {
+            if (headMesh.children.some(child => child.userData.isHeadOutline)) return;
+
+            // A solid band gives the separator reliable thickness in WebGL exports.
+            // Match the octagonal head, with a slight outset to prevent z-fighting.
+            const height = 0.08;
+            const geometry = new THREE.CylinderGeometry(0.302, 0.302, height, 8, 1, false);
+            geometry.rotateY(Math.PI / 8);
+            geometry.translate(0, height / 2 - 0.002, 0);
+            const separator = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                toneMapped: false
+            }));
+            separator.userData.isHeadOutline = true;
+            headMesh.add(separator);
+        }
+
         function applySpritePalette(canvas, colors) {
             const palette = [...colors];
             if (palette.length === 0) return;
@@ -4617,23 +4634,7 @@
 
                         headMesh.material = new THREE.MeshBasicMaterial({ color: REF_HEAD_COLORS_EXPORT[index] });
 
-                        // Remove bottom line from previous frame
-                        for (let i = headMesh.children.length - 1; i >= 0; i--) {
-                            if (headMesh.children[i].userData && headMesh.children[i].userData.isHeadOutline) {
-                                headMesh.remove(headMesh.children[i]);
-                            }
-                        }
-                        // Add bottom white line (head/neck separator)
-                        const bPositions = [];
-                        for (let j = 0; j <= 8; j++) {
-                            const t = (j / 8) * Math.PI * 2 + Math.PI / 8;
-                            bPositions.push(Math.sin(t) * 0.30, 0, Math.cos(t) * 0.30);
-                        }
-                        const bGeo = new THREE.BufferGeometry();
-                        bGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(bPositions), 3));
-                        const bLine = new THREE.Line(bGeo, new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 }));
-                        bLine.userData.isHeadOutline = true;
-                        headMesh.add(bLine);
+                        addNormalizedHeadSeparator(headMesh);
                     }
 
                     exportRenderer.render(scene, camera);
@@ -4746,7 +4747,10 @@
             if (headMesh) {
                 for (let i = headMesh.children.length - 1; i >= 0; i--) {
                     if (headMesh.children[i].userData && headMesh.children[i].userData.isHeadOutline) {
-                        headMesh.remove(headMesh.children[i]);
+                        const separator = headMesh.children[i];
+                        separator.geometry.dispose();
+                        separator.material.dispose();
+                        headMesh.remove(separator);
                     }
                 }
             }

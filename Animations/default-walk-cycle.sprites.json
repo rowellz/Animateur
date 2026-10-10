@@ -3237,6 +3237,7 @@
       "Left_Foot": "#AFEEEE",
       "Right_Foot": "#FFDAB9"
     },
+    "headSeparatorHeight": 0.08,
     "alphaMode": "binary",
     "palette": [
       "#800000",

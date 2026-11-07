@@ -278,13 +278,13 @@
             <div class="flex items-center justify-between gap-2">
                 <label class="text-gray-300">Frame Size</label>
                 <div class="flex items-center gap-1.5">
-                    <input id="exp-width" type="number" min="1" step="1" aria-label="Frame width" value="128" class="w-16 bg-white/10 border border-white/15 rounded px-2 py-1 text-white text-xs outline-none focus:border-purple-400">
+                    <input id="exp-width" type="number" min="1" step="1" aria-label="Frame width" value="165" class="w-16 bg-white/10 border border-white/15 rounded px-2 py-1 text-white text-xs outline-none focus:border-purple-400">
                     <span class="text-gray-500 text-xs">×</span>
-                    <input id="exp-height" type="number" min="1" step="1" aria-label="Frame height" value="128" class="w-16 bg-white/10 border border-white/15 rounded px-2 py-1 text-white text-xs outline-none focus:border-purple-400">
+                    <input id="exp-height" type="number" min="1" step="1" aria-label="Frame height" value="165" class="w-16 bg-white/10 border border-white/15 rounded px-2 py-1 text-white text-xs outline-none focus:border-purple-400">
                 </div>
             </div>
 
-            <p class="text-xs text-gray-400">Width × height of each exported frame in pixels. Cropped content fits inside this size without stretching.</p>
+            <p class="text-xs text-gray-400">Width × height of each frame in pixels. Fixed orthographic framing; cropping is optional.</p>
 
             <div class="flex items-center justify-between gap-2">
                 <label class="text-gray-300">Layout</label>
@@ -295,8 +295,18 @@
                 </select>
             </div>
 
+            <div class="flex items-center justify-between gap-2">
+                <label for="exp-fps" class="text-gray-300">Frames per second</label>
+                <input id="exp-fps" type="number" min="1" step="1" value="16" class="w-16 bg-white/10 border border-white/15 rounded px-2 py-1 text-white text-xs outline-none focus:border-purple-400">
+            </div>
+
             <label class="flex items-center gap-2 cursor-pointer">
-                <input id="exp-transparent" type="checkbox" class="accent-purple-400">
+                <input id="exp-loop" type="checkbox" class="accent-purple-400" checked>
+                <span class="text-gray-300">Loop (omit closing frame)</span>
+            </label>
+
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input id="exp-transparent" type="checkbox" class="accent-purple-400" checked>
                 <span class="text-gray-300">Transparent Background</span>
             </label>
 
@@ -419,10 +429,14 @@
         // --- Sprite Sheet Export State ---
         let isExporting = false;
         const exportSettings = {
-            width: 128,
-            height: 128,
+            width: 165,
+            height: 165,
             layout: 'grid',
-            transparentBackground: false,
+            frameRate: 16,
+            loop: true,
+            viewHeight: 4.4,
+            cameraTargetY: 2,
+            transparentBackground: true,
             normalizeHeadColor: true,
             useBoundingBox: false,
             boundingBoxWidth: 100,
@@ -1075,7 +1089,7 @@
                 playbackSpeed,
                 effects: serializeAnimationEffects(activeAnimationEffects),
                 keyframes: keyframes.map(frame => ({
-                    time: roundTime(frame.time),
+                    time: frame.time,
                     pose: serializePose(frame.pose)
                 }))
             };
@@ -1184,7 +1198,8 @@
             const uniqueFrames = new Map();
 
             (Array.isArray(serializedFrames) ? serializedFrames : []).forEach(frame => {
-                const time = roundTime(Number.parseFloat(frame?.time));
+                // Imported samples may be finer than the editor's manual snap grid.
+                const time = Number.parseFloat(frame?.time);
                 const pose = deserializePose(frame?.pose);
 
                 if (!Number.isFinite(time) || time < 0 || Object.keys(pose).length === 0) {
@@ -1193,7 +1208,7 @@
                     }
                     return;
                 }
-                uniqueFrames.set(time.toFixed(1), { time, pose });
+                uniqueFrames.set(time, { time, pose });
             });
 
             return Array.from(uniqueFrames.values())
@@ -1821,8 +1836,9 @@
                         obj.position.copy(pose[obj.name].position);
                         obj.quaternion.copy(pose[obj.name].quaternion);
                     });
-                    // Update spine centerline after pose changes
-                    updateSpineCenterline(charRoot);
+                    // The decoration follows its parent. Preserve the flat export
+                    // materials instead of rebuilding shaded meshes during sampling.
+                    if (!isExporting) updateSpineCenterline(charRoot);
                 });
 
                 syncTransformAttachment();
@@ -4403,6 +4419,8 @@
             document.getElementById('exp-width').value = exportSettings.width;
             document.getElementById('exp-height').value = exportSettings.height;
             document.getElementById('exp-layout').value = exportSettings.layout;
+            document.getElementById('exp-fps').value = exportSettings.frameRate;
+            document.getElementById('exp-loop').checked = exportSettings.loop;
             document.getElementById('exp-transparent').checked = exportSettings.transparentBackground;
             document.getElementById('exp-normalize-head').checked = exportSettings.normalizeHeadColor;
             document.getElementById('exp-bounding-box').checked = exportSettings.useBoundingBox;
@@ -4424,9 +4442,11 @@
         }
 
         function doExport() {
-            exportSettings.width = readExportDimension('exp-width', 128);
-            exportSettings.height = readExportDimension('exp-height', 128);
+            exportSettings.width = readExportDimension('exp-width', 165);
+            exportSettings.height = readExportDimension('exp-height', 165);
             exportSettings.layout = document.getElementById('exp-layout').value;
+            exportSettings.frameRate = readExportDimension('exp-fps', 16);
+            exportSettings.loop = document.getElementById('exp-loop').checked;
             exportSettings.transparentBackground = document.getElementById('exp-transparent').checked;
             exportSettings.normalizeHeadColor = document.getElementById('exp-normalize-head').checked;
             exportSettings.useBoundingBox = document.getElementById('exp-bounding-box').checked;
@@ -4495,6 +4515,23 @@
             context.putImageData(image, 0, 0);
         }
 
+        function getSpriteExportTimes(frames, frameRate, loop, speed = 1) {
+            if (frames.length === 0) return [];
+            const start = Math.min(...frames.map(frame => frame.time));
+            const end = Math.max(...frames.map(frame => frame.time));
+            if (start === end) return [start];
+            const count = Math.max(1, Math.ceil((end - start) * frameRate / speed - 1e-9));
+            const times = Array.from({ length: count }, (_, index) => start + index * speed / frameRate);
+            if (!loop) times.push(end);
+            return times;
+        }
+
+        function createSpriteExportCamera() {
+            const halfHeight = exportSettings.viewHeight / 2;
+            const halfWidth = halfHeight * exportSettings.width / exportSettings.height;
+            return new THREE.OrthographicCamera(-halfWidth, halfWidth, halfHeight, -halfHeight, 0.1, 50);
+        }
+
         async function generateSpriteSheet() {
             if (keyframes.length === 0) { alert('No keyframes!'); return; }
             isExporting = true;
@@ -4534,8 +4571,7 @@
             exportRenderer.toneMapping = THREE.NoToneMapping;
             exportRenderer.setClearAlpha(0); // always use alpha channel for auto tight-bounds detection
 
-            const originalCameraPos = camera.position.clone();
-            const originalAspect = camera.aspect;
+            const exportCamera = createSpriteExportCamera();
 
             // Hide summon VFX
             if (summonVfx) summonVfx.group.visible = false;
@@ -4581,15 +4617,10 @@
             });
 
             exportRenderer.setSize(exportSettings.width, exportSettings.height, false);
-            camera.aspect = exportSettings.width / exportSettings.height;
-            camera.updateProjectionMatrix();
-
             const directions = 8;
-            const frames = keyframes.length;
-
-            // Frames stored here; canvas dimensions are computed after tight-bounds detection
+            const frameTimes = getSpriteExportTimes(keyframes, exportSettings.frameRate, exportSettings.loop, playbackSpeed);
+            const frames = frameTimes.length;
             const renderedFrames = [];
-            let autoMinX = Infinity, autoMinY = Infinity, autoMaxX = -Infinity, autoMaxY = -Infinity;
 
             // Find head mesh (first character, first Head_ group child mesh)
             let headMesh = null;
@@ -4602,25 +4633,24 @@
             }
 
             const radius = 9;
-            const height = 2.6;
+            const height = exportSettings.cameraTargetY;
 
             for (let d = 0; d < directions; d++) {
                 const angle = (d / directions) * Math.PI * 2 - Math.PI * 0.25;
-                camera.position.x = Math.sin(angle) * radius;
-                camera.position.z = Math.cos(angle) * radius;
-                camera.position.y = height;
-                camera.lookAt(0, 2.6, 0);
-                camera.updateMatrixWorld();
+                exportCamera.position.set(Math.sin(angle) * radius, height, Math.cos(angle) * radius);
+                exportCamera.lookAt(0, height, 0);
+                exportCamera.updateMatrixWorld();
 
                 for (let f = 0; f < frames; f++) {
-                    applyPoseState(keyframes[f].pose);
+                    applyPoseAtTime(frameTimes[f]);
+                    if (summonVfx) summonVfx.group.visible = false;
 
                     // Normalize Head Color Logic (matches +page.svelte exactly)
                     if (exportSettings.normalizeHeadColor && headMesh) {
                         const headWorldPos = new THREE.Vector3();
                         headMesh.getWorldPosition(headWorldPos);
 
-                        const viewVec = new THREE.Vector3().subVectors(camera.position, headWorldPos).normalize();
+                        const viewVec = new THREE.Vector3().subVectors(exportCamera.position, headWorldPos).normalize();
                         const headQuat = new THREE.Quaternion();
                         headMesh.getWorldQuaternion(headQuat);
                         const invQuat = headQuat.clone().invert();
@@ -4637,7 +4667,7 @@
                         addNormalizedHeadSeparator(headMesh);
                     }
 
-                    exportRenderer.render(scene, camera);
+                    exportRenderer.render(scene, exportCamera);
 
                     // Store this frame as a canvas snapshot
                     const frameCanvas = document.createElement('canvas');
@@ -4647,29 +4677,13 @@
                     fCtx.imageSmoothingEnabled = false;
                     fCtx.drawImage(exportRenderer.domElement, 0, 0);
 
-                    // Auto-detect tight content bounds via alpha channel
-                    if (!exportSettings.useBoundingBox) {
-                        const imgData = fCtx.getImageData(0, 0, exportSettings.width, exportSettings.height);
-                        const data = imgData.data;
-                        for (let py = 0; py < exportSettings.height; py++) {
-                            for (let px = 0; px < exportSettings.width; px++) {
-                                if (data[(py * exportSettings.width + px) * 4 + 3] > 8) {
-                                    if (px < autoMinX) autoMinX = px;
-                                    if (py < autoMinY) autoMinY = py;
-                                    if (px > autoMaxX) autoMaxX = px;
-                                    if (py > autoMaxY) autoMaxY = py;
-                                }
-                            }
-                        }
-                    }
-
                     renderedFrames.push({ d, f, canvas: frameCanvas });
 
                     await new Promise(r => setTimeout(r, 20));
                 }
             }
 
-            // Compute crop region: manual bounding box or auto-detected tight bounds
+            // Preserve the full orthographic frame unless the user requests a crop.
             let cropX, cropY, cropW, cropH;
             if (exportSettings.useBoundingBox) {
                 cropW = exportSettings.boundingBoxWidth;
@@ -4677,14 +4691,10 @@
                 cropX = (exportSettings.width - cropW) / 2 + exportSettings.boundingBoxOffsetX;
                 cropY = (exportSettings.height - cropH) / 2 + exportSettings.boundingBoxOffsetY;
             } else {
-                // Add 2 px padding around detected tight bounds
-                const pad = 2;
-                cropX = Math.max(0, autoMinX - pad);
-                cropY = Math.max(0, autoMinY - pad);
-                const rawMaxX = Math.min(exportSettings.width - 1, autoMaxX + pad);
-                const rawMaxY = Math.min(exportSettings.height - 1, autoMaxY + pad);
-                cropW = (autoMaxX >= autoMinX) ? (rawMaxX - cropX + 1) : exportSettings.width;
-                cropH = (autoMaxY >= autoMinY) ? (rawMaxY - cropY + 1) : exportSettings.height;
+                cropX = 0;
+                cropY = 0;
+                cropW = exportSettings.width;
+                cropH = exportSettings.height;
             }
 
             // Cropping controls framing, not the user's requested output resolution.
@@ -4786,11 +4796,6 @@
             scene.fog = originalFog;
             if (grid) grid.visible = true;
             if (floor) floor.visible = true;
-
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            camera.position.copy(originalCameraPos);
-            camera.lookAt(0, 2.5, 0);
 
             // Restore summon VFX
             if (activeAnimationEffects) applyAnimationEffectsState(currentTime);
